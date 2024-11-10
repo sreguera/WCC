@@ -1,0 +1,74 @@
+#!/bin/bash
+
+TEMP=$(getopt --options "S" --long "lex,parse,codegen" --name "$0" -- "$@")
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+eval set -- "${TEMP}"
+
+LAST_PASS=EMIT
+while true; do
+    case "$1" in
+        --lex)
+            LAST_PASS=LEX
+            shift 1
+            ;;
+        --parse)
+            LAST_PASS=PARSE
+            shift 1
+            ;;
+        --codegen)
+            LAST_PASS=CODEGEN
+            shift 1
+            ;;
+        -S)
+            LAST_PASS=ASSEMBLER
+            shift 1
+            ;;
+        --)
+            shift 1
+            break
+            ;;
+        *)
+            echo "Error here"
+            exit 1
+            ;;
+    esac
+done
+
+INPUT_FILE=$1
+BASE_FILE=${INPUT_FILE%.*}
+PREPROCESSED_FILE=${BASE_FILE}.i
+ASSEMBLY_FILE=${BASE_FILE}.s
+OUTPUT_FILE=${BASE_FILE}
+
+echo "gcc -E -P \"${INPUT_FILE}\" -o \"${PREPROCESSED_FILE}\""
+# gcc -E -P "${INPUT_FILE}" -o "${PREPROCESSED_FILE}"
+
+CARGS=""
+case "${LAST_PASS}" in
+    LEX)
+        CARGS=--lex
+        ;;
+    PARSE)
+        CARGS=--parse
+        ;;
+    CODEGEN)
+        CARGS=--codegen
+        ;;
+    ASSEMBLER)
+        CARGS=-S
+        ;;
+esac
+echo "compile ${CARGS} \"${PREPROCESSED_FILE}\" -o \"${ASSEMBLY_FILE}\""
+echo "rm \"${PREPROCESSED_FILE}\""
+# gcc -S "${PREPROCESSED_FILE}" -o "${ASSEMBLY_FILE}"
+# rm "${PREPROCESSED_FILE}"
+
+if [ ${LAST_PASS} = EMIT ]; then
+    echo "gcc \"${ASSEMBLY_FILE}\" -o \"${OUTPUT_FILE}\""
+    echo "rm \"${ASSEMBLY_FILE}\""
+    # gcc "${ASSEMBLY_FILE}" -o "${OUTPUT_FILE}"
+    # rm "${ASSEMBLY_FILE}"
+fi
+
