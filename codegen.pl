@@ -1,0 +1,18 @@
+:- module(codegen, [generate/2]).
+
+generate(program(FunDef), program(FunDefAsm)) :-
+    generate(FunDef, FunDefAsm).
+generate(function(Name, Body), function(Name, Instructions)) :-
+    generate(Body, Instructions).
+generate(return(Exp), [mov(Source, reg), ret]) :-
+    generate(Exp, Source).
+generate(constant(Int), imm(Int)).
+
+:- begin_tests(codegen).
+
+test(codegen) :-
+    generate(program(function(main, return(constant(2)))), Asm),
+    Asm = program(function(main, [mov(imm(2), reg), ret])).
+
+:- end_tests(codegen).
+
