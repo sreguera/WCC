@@ -1,5 +1,4 @@
 :- module(parser, [parse/2]).
-:- use_module(lexer).
 :- use_module(dcg_utils).
 
 program(program(FunctionDefinition)) -->
@@ -18,14 +17,16 @@ statement(return(Exp)) -->
 exp(constant(Int)) -->
     [constant(Int)].
 
-parse(Source, Program) :-
-    scan(Source, Tokens),
+parse(Tokens, Program) :-
     once(phrase(program(Program), Tokens)).
 
 :- begin_tests(parser).
 
+:- use_module(lexer).
+
 test(parse) :-
-    parse("int main(void) { return 2; }", Program),
+    scan("int main(void) { return 2; }", Tokens),
+    parse(Tokens, Program),
     Program = program(function(main, return(constant(2)))).
 
 :- end_tests(parser).

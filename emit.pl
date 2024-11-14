@@ -1,7 +1,7 @@
 :- module(emit, [emit/2]).
 
-emit(Fragment, Output) :-
-    with_output_to(string(Output), emit(Fragment)).
+emit(Asm, Output) :-
+    with_output_to(string(Output), emit(Asm)).
    
 emit(program(FunDef)) :-
     emit(FunDef),

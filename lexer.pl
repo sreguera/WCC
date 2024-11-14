@@ -58,10 +58,12 @@ white_space(white_space(S)) -->
     { code_type(S, space)
     }.
 
+white_spaces() -->
+    sequence(white_space, _).
+
 xtoken(T) -->
+    white_spaces(),
     ( token(T)
-    ; white_space(_),
-      token(T)
     ; invalid_char(T)
     ).
 
@@ -74,7 +76,7 @@ xtokens(Ts) -->
     sequence(xtoken, Ts).
 
 scan(G, Ts) :-
-    atom_codes(G, Cs),
+    string_codes(G, Cs),
     once(phrase(xtokens(Ts), Cs)).
 
 :- begin_tests(lexer).
