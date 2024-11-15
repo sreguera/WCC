@@ -33,8 +33,18 @@ identifier_continue(C) -->
 
 constant(constant(I)) -->
     sequence1(digit, Ds),
+    ( nochar | call(eos) ),
     { number_codes(I, Ds)
     }.
+
+nochar(), [X] -->
+    [X],
+    {   code_type(X, csymf)
+    ->  throw(invalid_digit(X))
+    ;   true
+    }.
+
+eos([], []).
 
 digit(C) -->
     [C],
@@ -62,10 +72,10 @@ white_spaces() -->
     sequence(white_space, _).
 
 xtoken(T) -->
-    white_spaces(),
     ( token(T)
     ; invalid_char(T)
-    ).
+    ),
+    white_spaces().
 
 invalid_char(C) -->
     [C],
@@ -73,11 +83,12 @@ invalid_char(C) -->
     }.
 
 xtokens(Ts) -->
+    white_spaces(),
     sequence(xtoken, Ts).
 
-scan(G, Ts) :-
-    string_codes(G, Cs),
-    once(phrase(xtokens(Ts), Cs)).
+scan(Source, Tokens) :-
+    string_codes(Source, Codes),
+    once(phrase(xtokens(Tokens), Codes)).
 
 :- begin_tests(lexer).
 
@@ -86,8 +97,16 @@ test(scan_identifiers) :-
     X = [identifier('abc'), return, int, void].
 
 test(scan_constants) :-
-    scan("123", X),
+    scan("123 456", X),
+    X = [constant(123), constant(456)].
+
+test(scan_end) :-
+    scan("123 ", X),
     X = [constant(123)].
+
+test(scan_mixed) :-
+    catch(scan("123abc", _), invalid_digit(C), true),
+    C = 0'a.
 
 test(scan_punctuators) :-
     scan("(){};", X),
