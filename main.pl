@@ -6,11 +6,20 @@
 :- initialization(main, main).
 
 main(Argv) :-
-    Argv = [File|_],
-    writeln(File),
-    read_file_to_string(File, Chars, []),
-    scan(Chars, Tokens),
-    parse(Tokens, Ast),
-    generate(Ast, Asm),
-    emit(Asm, Text),
-    writeln(Text).
+    Argv = [Flag, IPath, SPath|_],
+    read_file_to_string(IPath, Source, []),
+    scan(Source, Tokens),
+    (   Flag = '--lex'
+    ->  true
+    ;   parse(Tokens, Ast),
+        (   Flag = '--parse'
+        ->  true
+        ;   generate(Ast, Asm),
+            (   Flag = '--codegen'
+            ->  true
+            ;   emit(Asm, AsmText),
+                open(SPath, write, SStream),
+                with_output_to(SStream, write(AsmText))
+            )
+        )
+    ).

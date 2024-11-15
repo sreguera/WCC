@@ -1,4 +1,5 @@
 #!/bin/bash
+HERE="$(dirname "$0")"
 
 TEMP=$(getopt --options "S" --long "lex,parse,codegen" --name "$0" -- "$@")
 if [[ $? -ne 0 ]]; then
@@ -22,7 +23,7 @@ while true; do
             shift 1
             ;;
         -S)
-            LAST_PASS=ASSEMBLER
+            LAST_PASS=ASSEMBLE
             shift 1
             ;;
         --)
@@ -42,8 +43,10 @@ PREPROCESSED_FILE=${BASE_FILE}.i
 ASSEMBLY_FILE=${BASE_FILE}.s
 OUTPUT_FILE=${BASE_FILE}
 
-echo "gcc -E -P \"${INPUT_FILE}\" -o \"${PREPROCESSED_FILE}\""
-# gcc -E -P "${INPUT_FILE}" -o "${PREPROCESSED_FILE}"
+gcc -E -P "${INPUT_FILE}" -o "${PREPROCESSED_FILE}"
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
 
 CARGS=""
 case "${LAST_PASS}" in
@@ -56,19 +59,22 @@ case "${LAST_PASS}" in
     CODEGEN)
         CARGS=--codegen
         ;;
-    ASSEMBLER)
+    ASSEMBLE)
         CARGS=-S
         ;;
 esac
-echo "compile ${CARGS} \"${PREPROCESSED_FILE}\" -o \"${ASSEMBLY_FILE}\""
-echo "rm \"${PREPROCESSED_FILE}\""
-# gcc -S "${PREPROCESSED_FILE}" -o "${ASSEMBLY_FILE}"
-# rm "${PREPROCESSED_FILE}"
+
+swipl "${HERE}/main.pl" -- "${CARGS}" "${PREPROCESSED_FILE}" "${ASSEMBLY_FILE}"
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+rm "${PREPROCESSED_FILE}"
 
 if [ ${LAST_PASS} = EMIT ]; then
-    echo "gcc \"${ASSEMBLY_FILE}\" -o \"${OUTPUT_FILE}\""
-    echo "rm \"${ASSEMBLY_FILE}\""
-    # gcc "${ASSEMBLY_FILE}" -o "${OUTPUT_FILE}"
-    # rm "${ASSEMBLY_FILE}"
+    gcc "${ASSEMBLY_FILE}" -o "${OUTPUT_FILE}"
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
+    rm "${ASSEMBLY_FILE}"
 fi
 
