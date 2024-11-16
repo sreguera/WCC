@@ -3,6 +3,18 @@
 :- module(lexer, [scan/2]).
 :- use_module(dcg_utils).
 
+/** <module> Lexer
+ 
+Lexer for Chapter 2 of "Writing a C Compiler".
+
+The lexer parses strings into tokens.
+A token is one of:
+    | identifier(atom)
+    | const(int)
+    | return | int | void
+    | '(' | ')' | '{' | '}' | ';' | '--' | '~' | '-'
+*/
+
 token(T) -->
     ( identifier(T)
     ; constant(T)
@@ -35,11 +47,16 @@ identifier_continue(C) -->
 
 constant(constant(I)) -->
     sequence1(digit, Ds),
-    ( nochar | call(eos) ),
+    ( no_digit | call(eos) ),   % 123abc is an error.
     { number_codes(I, Ds)
     }.
 
-nochar(), [X] -->
+%!  no_digit
+%
+%   Peeks the next char and throws if it is the beginning of an identifier.
+%   @throws invalid_digit(C) if the next char is the beginning of an identifier.
+
+no_digit(), [X] -->
     [X],
     {   code_type(X, csymf)
     ->  throw(invalid_digit(X))
@@ -53,6 +70,8 @@ digit(C) -->
     { code_type(C, digit)
     }.
 
+punctuator('--') -->
+    "--".
 punctuator(P) -->
     [C],
     { punctuator_char(C),
@@ -63,6 +82,8 @@ punctuator_char(0'().
 punctuator_char(0')).
 punctuator_char(0'{).
 punctuator_char(0'}).
+punctuator_char(0'~).
+punctuator_char(0'-).
 punctuator_char(0';).
 
 white_space(white_space(S)) -->
@@ -88,6 +109,12 @@ xtokens(Ts) -->
     white_spaces(),
     sequence(xtoken, Ts).
 
+%!  scan(+Source:string, -Tokens:[token]) is det.
+%
+%   Parses the source string into its constituent tokens.
+%   @throws invalid_char(C) if an unknown char is present in the string.
+%   @throws invalid_digit(C) if a number ends at the start of an identifier.
+
 scan(Source, Tokens) :-
     string_codes(Source, Codes),
     once(phrase(xtokens(Tokens), Codes)).
@@ -111,8 +138,8 @@ test(scan_mixed) :-
     C = 0'a.
 
 test(scan_punctuators) :-
-    scan("(){};", X),
-    X = ['(', ')', '{', '}', ';'].
+    scan("(){};--~-", X),
+    X = ['(', ')', '{', '}', ';', '--', '~', '-'].
 
 test(invalid) :-
     catch(scan("?", _), invalid_char(C), true),
