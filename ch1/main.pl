@@ -1,3 +1,5 @@
+/* Copyright 2024 José Sebastián Reguera Candal
+*/
 :- use_module(library(main)).
 :- use_module(lexer).
 :- use_module(parser).

@@ -1,3 +1,5 @@
+/* Copyright 2024 José Sebastián Reguera Candal
+*/
 :- module(lexer, [scan/2]).
 :- use_module(dcg_utils).
 

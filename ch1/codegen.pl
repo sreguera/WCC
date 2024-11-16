@@ -1,3 +1,5 @@
+/* Copyright 2024 José Sebastián Reguera Candal
+*/
 :- module(codegen, [generate/2]).
 
 generate(program(FunDef), program(FunDefAsm)) :-

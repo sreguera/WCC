@@ -1,3 +1,5 @@
+/* Copyright 2024 José Sebastián Reguera Candal
+*/
 :- module(emit, [emit/2]).
 
 emit(Asm, Output) :-

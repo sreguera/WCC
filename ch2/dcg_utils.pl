@@ -1,11 +1,13 @@
+/* Copyright 2024 José Sebastián Reguera Candal
+*
+* Copyright and License of most of this file is the one in SWI-Prolog.
+* See: https://github.com/SWI-Prolog/swipl-devel/blob/master/library/dcg/high_order.pl
+*/
 :- module(dcg_utils, [
     sequence/4,
     sequence1/4,
     optional/4
 ]).
-
-% See:
-% https://github.com/SWI-Prolog/swipl-devel/blob/master/library/dcg/high_order.pl
 
 :- meta_predicate 
     sequence1(3, ?, ?, ?),

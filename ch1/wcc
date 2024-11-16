@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# Copyright 2024 José Sebastián Reguera Candal
+#
 HERE="$(dirname "$0")"
 
 TEMP=$(getopt --options "S" --long "lex,parse,codegen" --name "$0" -- "$@")

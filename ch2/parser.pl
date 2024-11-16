@@ -1,3 +1,5 @@
+/* Copyright 2024 José Sebastián Reguera Candal
+*/
 :- module(parser, [parse/2]).
 :- use_module(dcg_utils).
 
