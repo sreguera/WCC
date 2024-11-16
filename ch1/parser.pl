@@ -3,6 +3,17 @@
 :- module(parser, [parse/2]).
 :- use_module(dcg_utils).
 
+/** <module> Parser
+ 
+Parser for Chapter 1 of "Writing a C Compiler".
+
+The parser parses a list of tokens into the AST of a program.
+    * Program = program(FunctionDefinition)
+    * FunctionDefinition = function(Name:atom, Body)
+    * Body = return(Exp)
+    * Exp = constant(Value:int)
+*/
+
 program(program(FunctionDefinition)) -->
     function_definition(FunctionDefinition).
 
@@ -18,6 +29,10 @@ statement(return(Exp)) -->
 
 exp(constant(Int)) -->
     [constant(Int)].
+
+%!  parse(+Tokens:[token], -Program) is det
+%
+%   Parses a list of tokens into the AST of a program.
 
 parse(Tokens, Program) :-
     once(phrase(program(Program), Tokens)).
