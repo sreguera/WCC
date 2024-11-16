@@ -1,0 +1,80 @@
+#!/bin/bash
+HERE="$(dirname "$0")"
+
+TEMP=$(getopt --options "S" --long "lex,parse,codegen" --name "$0" -- "$@")
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+eval set -- "${TEMP}"
+
+LAST_PASS=EMIT
+while true; do
+    case "$1" in
+        --lex)
+            LAST_PASS=LEX
+            shift 1
+            ;;
+        --parse)
+            LAST_PASS=PARSE
+            shift 1
+            ;;
+        --codegen)
+            LAST_PASS=CODEGEN
+            shift 1
+            ;;
+        -S)
+            LAST_PASS=ASSEMBLE
+            shift 1
+            ;;
+        --)
+            shift 1
+            break
+            ;;
+        *)
+            echo "Error here"
+            exit 1
+            ;;
+    esac
+done
+
+INPUT_FILE=$1
+BASE_FILE=${INPUT_FILE%.*}
+PREPROCESSED_FILE=${BASE_FILE}.i
+ASSEMBLY_FILE=${BASE_FILE}.s
+OUTPUT_FILE=${BASE_FILE}
+
+gcc -E -P "${INPUT_FILE}" -o "${PREPROCESSED_FILE}"
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+
+CARGS=""
+case "${LAST_PASS}" in
+    LEX)
+        CARGS=--lex
+        ;;
+    PARSE)
+        CARGS=--parse
+        ;;
+    CODEGEN)
+        CARGS=--codegen
+        ;;
+    ASSEMBLE)
+        CARGS=-S
+        ;;
+esac
+
+swipl "${HERE}/main.pl" -- "${CARGS}" "${PREPROCESSED_FILE}" "${ASSEMBLY_FILE}"
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+rm "${PREPROCESSED_FILE}"
+
+if [ ${LAST_PASS} = EMIT ]; then
+    gcc "${ASSEMBLY_FILE}" -o "${OUTPUT_FILE}"
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
+    rm "${ASSEMBLY_FILE}"
+fi
+
