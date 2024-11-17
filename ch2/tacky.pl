@@ -3,7 +3,7 @@
 :- module(tacky, [generate/2]).
 
 
-/** <module> Parser
+/** <module> Tacky
  
 Tacky generator for Chapter 2 of "Writing a C Compiler".
 
