@@ -2,6 +2,12 @@
 */
 :- module(codegen, [generate/2]).
 
+/** <module> Codegen
+ 
+Assembler generator for Chapter 1 of "Writing a C Compiler".
+
+*/
+
 generate(program(FunDef), program(FunDefAsm)) :-
     generate(FunDef, FunDefAsm).
 generate(function(Name, Body), function(Name, Instructions)) :-
