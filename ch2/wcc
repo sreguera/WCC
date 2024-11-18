@@ -4,7 +4,7 @@
 #
 HERE="$(dirname "$0")"
 
-TEMP=$(getopt --options "S" --long "lex,parse,codegen" --name "$0" -- "$@")
+TEMP=$(getopt --options "S" --long "lex,parse,tacky,codegen" --name "$0" -- "$@")
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
@@ -19,6 +19,10 @@ while true; do
             ;;
         --parse)
             LAST_PASS=PARSE
+            shift 1
+            ;;
+        --tacky)
+            LAST_PASS=TACKY
             shift 1
             ;;
         --codegen)
@@ -58,6 +62,9 @@ case "${LAST_PASS}" in
         ;;
     PARSE)
         CARGS=--parse
+        ;;
+    TACKY)
+        CARGS=--tacky
         ;;
     CODEGEN)
         CARGS=--codegen

@@ -1,6 +1,6 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
-:- module(tacky, [generate/2]).
+:- module(tacky, [tack/2]).
 
 
 /** <module> Tacky
@@ -19,11 +19,11 @@ The generator convertes the AST to Tacky IL.
     * Unop = '~' | '-'
 */
 
-generate(program(FunDef), program(FunDefTacky)) :-
+tack(program(FunDef), program(FunDefTacky)) :-
     reset_gensym,
-    generate(FunDef, FunDefTacky).
+    tack(FunDef, FunDefTacky).
 
-generate(function(Name, Body), function(Name, Instructions)) :-
+tack(function(Name, Body), function(Name, Instructions)) :-
     stmt_insts(Body, Instructions).
 
 stmt_insts(return(Exp), Insts) :-
@@ -42,11 +42,11 @@ exp_insts(unary(Op, Inner), Dest, Is, T) :-
 :- begin_tests(tacky).
 
 test(p0) :-
-    generate(program(function(main, return(constant(2)))), Tacky),
+    tack(program(function(main, return(constant(2)))), Tacky),
     Tacky = program(function(main, [return(constant(2))])).
 
 test(p2) :-
-    generate(program(function(main, return(unary('-', unary('~', unary('-', constant(2))))))), Tacky),
+    tack(program(function(main, return(unary('-', unary('~', unary('-', constant(2))))))), Tacky),
     Tacky = program(function(main, [
         unary('-', constant(2), var('tmp.1')),
         unary('~', var('tmp.1'), var('tmp.2')),
