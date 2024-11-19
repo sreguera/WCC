@@ -2,6 +2,12 @@
 */
 :- module(emit, [emit/2]).
 
+/** <module> Emit
+ 
+Assembler emitter for Chapter 1 of "Writing a C Compiler".
+
+*/
+
 emit(Asm, Output) :-
     with_output_to(string(Output), emit(Asm)).
    

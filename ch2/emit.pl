@@ -2,6 +2,12 @@
 */
 :- module(emit, [emit/2]).
 
+/** <module> Emit
+ 
+Assembler emitter for Chapter 2 of "Writing a C Compiler".
+
+*/
+
 emit(Asm, Output) :-
     with_output_to(string(Output), emit(Asm)).
    
@@ -11,25 +17,60 @@ emit(program(FunDef)) :-
 emit(function(Name, Instructions)) :-
     format("    .globl ~s~n", [Name]),
     format("~s:~n", [Name]),
+    format("    pushq   %rbp~n"),
+    format("    movq    %rsp, %rbp~n"),
     maplist(emit, Instructions).
 emit(mov(Source, Dest)) :-
     exp_emit(Source, SOut),
     exp_emit(Dest, EOut),
-    format("    movl ~s, ~s~n", [SOut, EOut]).
+    format("    movl    ~s, ~s~n", [SOut, EOut]).
 emit(ret) :-
+    format("    movq    %rbp, %rsp~n"),
+    format("    popq    %rbp~n"),
     format("    ret~n").
+emit(unary(Op, Val)) :-
+    op_emit(Op, OpOut),
+    exp_emit(Val, VOut),
+    format("    ~s  ~s~n", [OpOut, VOut]).
+emit(allocate_stack(Size)) :-
+    format("    subq    $~d, %rsp~n", [Size]).
 
-exp_emit(reg, "%eax").
+op_emit('~', "notl").
+op_emit('-', "negl").
+
+exp_emit(reg(ax), "%eax") :- !.
+exp_emit(reg(r10), "%r10d") :- !.
+exp_emit(stack(Offset), Out) :-
+    format(string(Out), "~d(%rbp)", [Offset]).
 exp_emit(imm(Int), Out) :-
     format(string(Out), "$~d", [Int]).
 
 :- begin_tests(emit).
 
 test(emit) :-
-    emit(program(function(main, [mov(imm(2), reg), ret])), Asm),
+    emit(program(function(main, [
+        allocate_stack(8),
+        mov(imm(2), stack(-4)),
+        unary('-', stack(-4)),
+        mov(stack(-4), reg(r10)),
+        mov(reg(r10), stack(-8)),
+        unary('~', stack(-8)),
+        mov(stack(-8), reg(ax)),
+        ret
+    ])), Asm),
     Asm = "    .globl main
 main:
-    movl $2, %eax
+    pushq   %rbp
+    movq    %rsp, %rbp
+    subq    $8, %rsp
+    movl    $2, -4(%rbp)
+    negl  -4(%rbp)
+    movl    -4(%rbp), %r10d
+    movl    %r10d, -8(%rbp)
+    notl  -8(%rbp)
+    movl    -8(%rbp), %eax
+    movq    %rbp, %rsp
+    popq    %rbp
     ret
     .section .note.GNU-stack,\"\",@progbits
 ".
