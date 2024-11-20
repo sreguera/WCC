@@ -11,7 +11,7 @@
 main(Argv) :-
     Argv = [Flag, IPath, SPath|_],
     read_file_to_string(IPath, Source, []),
-    scan(Source, Tokens),
+    lex(Source, Tokens),
     (   Flag = '--lex'
     ->  true
     ;   parse(Tokens, Ast),
