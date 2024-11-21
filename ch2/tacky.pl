@@ -39,6 +39,10 @@ exp_insts(unary(Op, Inner), Dest, Is, T) :-
     X = [unary(Op, Dest0, Dest)|T].
 
 
+%-----------%
+%   TESTS   %
+%-----------%
+
 :- begin_tests(tacky).
 
 test(p0) :-
@@ -46,11 +50,11 @@ test(p0) :-
     Tacky = program(function(main, [return(constant(2))])).
 
 test(p2) :-
-    tack(program(function(main, return(unary('-', unary('~', unary('-', constant(2))))))), Tacky),
+    tack(program(function(main, return(unary(negate, unary(complement, unary(negate, constant(2))))))), Tacky),
     Tacky = program(function(main, [
-        unary('-', constant(2), var('tmp.1')),
-        unary('~', var('tmp.1'), var('tmp.2')),
-        unary('-', var('tmp.2'), var('tmp.3')),
+        unary(negate, constant(2), var('tmp.1')),
+        unary(complement, var('tmp.1'), var('tmp.2')),
+        unary(negate, var('tmp.2'), var('tmp.3')),
         return(var('tmp.3'))
     ])).
 

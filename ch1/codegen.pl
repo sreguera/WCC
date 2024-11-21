@@ -16,6 +16,11 @@ generate(return(Exp), [mov(Source, reg), ret]) :-
     generate(Exp, Source).
 generate(constant(Int), imm(Int)).
 
+
+%-----------%
+%   TESTS   %
+%-----------%
+
 :- begin_tests(codegen).
 
 test(codegen) :-

@@ -22,9 +22,13 @@ generate(function(Name, Insts), function(Name, AsmInsts)) :-
 
 inst_asm(return(Val), [mov(AsmVal, reg(ax)), ret]) :-
     val_asm(Val, AsmVal).
-inst_asm(unary(Op, Src, Dst), [mov(AsmSrc, AsmDst), unary(Op, AsmDst)]) :-
+inst_asm(unary(Op, Src, Dst), [mov(AsmSrc, AsmDst), unary(AsmOp, AsmDst)]) :-
+    op_asm(Op, AsmOp),
     val_asm(Src, AsmSrc),
     val_asm(Dst, AsmDst).
+
+op_asm(complement, not).
+op_asm(negate, neg).
 
 val_asm(constant(Int), imm(Int)).
 val_asm(var(Ident), pseudo(Ident)).
@@ -68,21 +72,25 @@ rep_reg(mov(stack(X), stack(Y)), [mov(stack(X), reg(r10)), mov(reg(r10), stack(Y
 rep_reg(I, I).
 
 
+%-----------%
+%   TESTS   %
+%-----------%
+
 :- begin_tests(codegen).
 
 test(codegen) :-
     generate(program(function(main, [
-        unary('-', constant(2), var('tmp.1')),
-        unary('~', var('tmp.1'), var('tmp.2')),
+        unary(negate, constant(2), var('tmp.1')),
+        unary(complement, var('tmp.1'), var('tmp.2')),
         return(var('tmp.2'))
     ])), Asm),
     Asm = program(function(main, [
         allocate_stack(8),
         mov(imm(2), stack(-4)),
-        unary('-', stack(-4)),
+        unary(neg, stack(-4)),
         mov(stack(-4), reg(r10)),
         mov(reg(r10), stack(-8)),
-        unary('~', stack(-8)),
+        unary(not, stack(-8)),
         mov(stack(-8), reg(ax)),
         ret
     ])).

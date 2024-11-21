@@ -35,8 +35,8 @@ emit(unary(Op, Val)) :-
 emit(allocate_stack(Size)) :-
     format("    subq    $~d, %rsp~n", [Size]).
 
-op_emit('~', "notl").
-op_emit('-', "negl").
+op_emit(not, "notl").
+op_emit(neg, "negl").
 
 exp_emit(reg(ax), "%eax") :- !.
 exp_emit(reg(r10), "%r10d") :- !.
@@ -45,16 +45,21 @@ exp_emit(stack(Offset), Out) :-
 exp_emit(imm(Int), Out) :-
     format(string(Out), "$~d", [Int]).
 
+
+%-----------%
+%   TESTS   %
+%-----------%
+
 :- begin_tests(emit).
 
 test(emit) :-
     emit(program(function(main, [
         allocate_stack(8),
         mov(imm(2), stack(-4)),
-        unary('-', stack(-4)),
+        unary(neg, stack(-4)),
         mov(stack(-4), reg(r10)),
         mov(reg(r10), stack(-8)),
-        unary('~', stack(-8)),
+        unary(not, stack(-8)),
         mov(stack(-8), reg(ax)),
         ret
     ])), Asm),

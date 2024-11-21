@@ -14,7 +14,7 @@ The parser parses a list of tokens into the AST of a program.
     * Exp = 
         | constant(Value:int)
         | unary(Unop, Exp))
-    * Unop = '~' | '-'
+    * Unop = complement | negate
 */
 
 program(program(FunctionDefinition)) -->
@@ -40,13 +40,13 @@ constant(constant(Int)) -->
     [constant(Int)].
 
 unary(unary(Op, Exp)) -->
-    [Op],
-    { unary_op(Op)
+    [T],
+    { unary_op(T, Op)
     },
     exp(Exp).
 
-unary_op('-').
-unary_op('~').
+unary_op('-', negate).
+unary_op('~', complement).
 
 paren(Exp) -->
     ['('],
@@ -60,19 +60,24 @@ paren(Exp) -->
 parse(Tokens, Program) :-
     once(phrase(program(Program), Tokens)).
 
+
+%-----------%
+%   TESTS   %
+%-----------%
+
 :- begin_tests(parser).
 
 :- use_module(lexer).
 
 test(parse) :-
-    scan("int main(void) { return 2; }", Tokens),
+    lex("int main(void) { return 2; }", Tokens),
     parse(Tokens, Program),
     Program = program(function(main, return(constant(2)))).
 
 test(parse) :-
-    scan("int main(void) { return ~(-2); }", Tokens),
+    lex("int main(void) { return ~(-2); }", Tokens),
     parse(Tokens, Program),
     writeln(Program),
-    Program = program(function(main, return(unary('~', unary('-', constant(2)))))).
+    Program = program(function(main, return(unary(complement, unary(negate, constant(2)))))).
 
 :- end_tests(parser).

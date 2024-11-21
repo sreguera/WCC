@@ -37,12 +37,17 @@ exp(constant(Int)) -->
 parse(Tokens, Program) :-
     once(phrase(program(Program), Tokens)).
 
+
+%-----------%
+%   TESTS   %
+%-----------%
+
 :- begin_tests(parser).
 
 :- use_module(lexer).
 
 test(parse) :-
-    scan("int main(void) { return 2; }", Tokens),
+    lex("int main(void) { return 2; }", Tokens),
     parse(Tokens, Program),
     Program = program(function(main, return(constant(2)))).
 

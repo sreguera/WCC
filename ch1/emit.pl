@@ -29,6 +29,11 @@ exp_emit(reg, "%eax").
 exp_emit(imm(Int), Out) :-
     format(string(Out), "$~d", [Int]).
 
+
+%-----------%
+%   TESTS   %
+%-----------%
+
 :- begin_tests(emit).
 
 test(emit) :-
