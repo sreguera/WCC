@@ -10,7 +10,7 @@ Lexer for Chapter 1 of "Writing a C Compiler".
 The lexer parses strings into tokens.
 A token is one of:
     | identifier(atom)
-    | const(int)
+    | constant(int)
     | return | int | void
     | '(' | ')' | '{' | '}' | ';'
 */
