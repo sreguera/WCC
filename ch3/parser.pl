@@ -5,7 +5,7 @@
 
 /** <module> Parser
  
-Parser for Chapter 2 of "Writing a C Compiler".
+Parser for Chapter 3 of "Writing a C Compiler".
 
 The parser parses a list of tokens into the AST of a program.
     * Program = program(FunctionDefinition)
@@ -13,8 +13,10 @@ The parser parses a list of tokens into the AST of a program.
     * Body = return(Exp)
     * Exp = 
         | constant(Value:int)
-        | unary(Unop, Exp))
+        | unary(Unop, Exp)
+        | binary(Binop, Exp, Exp)
     * Unop = complement | negate
+    * Binop = add | subtract | multiply | divide | remainder
 */
 
 program(program(FunctionDefinition)) -->
@@ -31,6 +33,34 @@ statement(return(Exp)) -->
     [';'].
 
 exp(Exp) -->
+    exp(0, Exp).
+
+exp(MinPrec, Exp) -->
+    factor(P),
+    exp_cont(MinPrec, P, Exp).
+
+exp_cont(MinPrec, Left, Exp) -->
+    binary_op(Op, OpPrec),
+    { OpPrec >= MinPrec,
+      MinPrec1 is OpPrec + 1
+    },
+    exp(MinPrec1, Right),
+    exp_cont(MinPrec, binary(Op, Left, Right), Exp).
+exp_cont(_, Left, Left) -->
+    [].
+
+binary_op(Op, Prec) -->
+    [C],
+    { bin_op(C, Op, Prec)
+    }.
+
+bin_op('+', add,       45).
+bin_op('-', subtract,  45).
+bin_op('*', multiply,  50).
+bin_op('/', divide,    50).
+bin_op('%', remainder, 50).
+
+factor(Exp) -->
     ( constant(Exp)
     ; unary(Exp)
     ; paren(Exp)
@@ -78,5 +108,19 @@ test(parse2) :-
     lex("int main(void) { return ~(-2); }", Tokens),
     parse(Tokens, Program),
     Program = program(function(main, return(unary(complement, unary(negate, constant(2)))))).
+
+test(exp) :-
+    lex("2 + 3 * 4", Tokens),
+    once(phrase(exp(Exp), Tokens)),
+    Exp = binary(add,
+            constant(2), 
+            binary(multiply, constant(3), constant(4))).
+
+test(exp) :-
+    lex("2 + 3 - 4", Tokens),
+    once(phrase(exp(Exp), Tokens)),
+    Exp = binary(subtract,
+            binary(add, constant(2), constant(3)),
+            constant(4)).
 
 :- end_tests(parser).
