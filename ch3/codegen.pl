@@ -4,7 +4,7 @@
 
 /** <module> Codegen
  
-Assembler generator for Chapter 2 of "Writing a C Compiler".
+Assembler generator for Chapter 3 of "Writing a C Compiler".
 
 */
 
@@ -23,9 +23,36 @@ inst_asm(unary(Op, Src, Dst), [mov(AsmSrc, AsmDst), unary(AsmOp, AsmDst)]) :-
     op_asm(Op, AsmOp),
     val_asm(Src, AsmSrc),
     val_asm(Dst, AsmDst).
+inst_asm(binary(Op, Left, Right, Dst), AsmInsts) :-
+    val_asm(Left, AsmLeft),
+    val_asm(Right, AsmRight),
+    val_asm(Dst, AsmDst),
+    (   Op = divide
+    ->  AsmInsts = [
+            mov(AsmLeft, reg(ax)),
+            cdq,
+            idiv(AsmRight),
+            mov(reg(ax), AsmDst)
+        ]
+    ;   Op = remainder
+    ->  AsmInsts = [
+            mov(AsmLeft, reg(ax)),
+            cdq,
+            idiv(AsmRight),
+            mov(reg(dx), AsmDst)
+        ]
+    ;   op_asm(Op, AsmOp),
+        AsmInsts = [
+            mov(AsmLeft, AsmDst),
+            binary(AsmOp, AsmRight, AsmDst)
+        ]
+    ).
 
 op_asm(complement, not).
 op_asm(negate, neg).
+op_asm(add, add).
+op_asm(subtract, sub).
+op_asm(multiply, mult).
 
 val_asm(constant(Int), imm(Int)).
 val_asm(var(Ident), pseudo(Ident)).
@@ -51,8 +78,14 @@ replace([I0|I0s], S0, [I|Is], S) :-
 %!  rep_inst(+InstIn, +StateIn, -InstOut, -StateOut)
 
 rep_inst(ret, S, ret, S).
+rep_inst(cdq, S, cdq, S).
+rep_inst(idiv(Val0), S0, idiv(Val), S) :-
+    rep_val(Val0, S0, Val, S).
 rep_inst(unary(Op, Val0), S0, unary(Op, Val), S) :-
     rep_val(Val0, S0, Val, S).
+rep_inst(binary(Op, Val0, Val1), S0, binary(Op, Val2, Val3), S) :-
+    rep_val(Val0, S0, Val2, S1),
+    rep_val(Val1, S1, Val3, S).
 rep_inst(mov(Val0, Val1), S0, mov(Val2, Val3), S) :-
     rep_val(Val0, S0, Val2, S1),
     rep_val(Val1, S1, Val3, S).
@@ -83,6 +116,27 @@ rep_reg(mov(stack(X), stack(Y)), Insts) :- !,
         mov(stack(X), reg(r10)),
         mov(reg(r10), stack(Y))
     ].
+rep_reg(binary(add, stack(X), stack(Y)), Insts) :- !,
+    Insts = [
+        mov(stack(X), reg(r10)),
+        binary(add, reg(r10), stack(Y))
+    ].
+rep_reg(binary(sub, stack(X), stack(Y)), Insts) :- !,
+    Insts = [
+        mov(stack(X), reg(r10)),
+        binary(sub, reg(r10), stack(Y))
+    ].
+rep_reg(binary(mult, X, stack(Y)), Insts) :- !,
+    Insts = [
+        mov(stack(Y), reg(r11)),
+        binary(mult, X, reg(r11)),
+        mov(reg(r11), stack(Y))
+    ].
+rep_reg(idiv(imm(V)), Insts) :- !,
+    Insts = [
+        mov(imm(V), reg(r10)),
+        idiv(reg(r10))
+    ].
 rep_reg(I, I).
 
 
@@ -108,6 +162,27 @@ test(codegen) :-
         mov(stack(-8), reg(ax)),
         ret
     ])).
+
+test(codegen) :-
+    generate(program(function(main, [
+        binary(add, constant(1), constant(2), var('tmp.1')),
+        return(var('tmp.1'))
+    ])), Asm),
+    Asm = program(function(main, [
+        allocate_stack(4),
+        mov(imm(1), stack(-4)),
+        binary(add, imm(2), stack(-4)),
+        mov(stack(-4), reg(ax)),
+        ret
+    ])).
+
+test(fixup) :-
+    fixup([binary(mult, imm(3), stack(-4))], Insts),
+    Insts = [
+        mov(stack(-4),reg(r11)),
+        binary(mult,imm(3),reg(r11)),
+        mov(reg(r11),stack(-4))
+    ].
 
 :- end_tests(codegen).
 
