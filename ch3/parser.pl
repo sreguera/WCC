@@ -109,6 +109,11 @@ test(parse2) :-
     parse(Tokens, Program),
     Program = program(function(main, return(unary(complement, unary(negate, constant(2)))))).
 
+test(parse3) :-
+    lex("int main(void) { return 1 + 2; }", Tokens),
+    parse(Tokens, Program),
+    Program = program(function(main,return(binary(add,constant(1),constant(2))))).
+
 test(exp) :-
     lex("2 + 3 * 4", Tokens),
     once(phrase(exp(Exp), Tokens)),

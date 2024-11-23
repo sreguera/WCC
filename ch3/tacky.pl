@@ -66,6 +66,13 @@ test(p2) :-
         return(var('tmp.3'))
     ])).
 
+test(p3a) :-
+    tack(program(function(main,return(binary(add,constant(1),constant(2))))), Tacky),
+    Tacky = program(function(main, [
+        binary(add, constant(1), constant(2), var('tmp.1')),
+        return(var('tmp.1'))
+    ])).
+
 test(p3) :-
     tack(program(function(main, return(
         binary(add, constant(2), binary(multiply, constant(3), constant(4)))))), Tacky),
