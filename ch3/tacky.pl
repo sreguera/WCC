@@ -5,7 +5,7 @@
 
 /** <module> Tacky
  
-Tacky generator for Chapter 2 of "Writing a C Compiler".
+Tacky generator for Chapter 3 of "Writing a C Compiler".
 
 The generator convertes the AST to Tacky IL.
     * Program = program(FunctionDefinition)
@@ -13,10 +13,12 @@ The generator convertes the AST to Tacky IL.
     * Instruction = 
         | return(val)
         | unary(Unop, src:val, dst:val)
+        | binary(Binop, left:val, right:val, dst:val)
     * Val = 
         | constant(Value:int)
         | var(Name:atom)
     * Unop = complement | negate
+    * Binop = add | subtract | multiply | divide | remainder
 */
 
 tack(program(FunDef), program(FunDefTacky)) :-
@@ -37,6 +39,12 @@ exp_insts(unary(Op, Inner), Dest, Is, T) :-
     gensym('tmp.', Temp),
     Dest = var(Temp),
     X = [unary(Op, Dest0, Dest)|T].
+exp_insts(binary(Op, Left, Right), Dest, Is, T) :-
+    exp_insts(Left, DestL, Is, I1),
+    exp_insts(Right, DestR, I1, I2),
+    gensym('tmp.', Temp),
+    Dest = var(Temp),
+    I2 = [binary(Op, DestL, DestR, Dest)|T].
 
 
 %-----------%
@@ -56,6 +64,15 @@ test(p2) :-
         unary(complement, var('tmp.1'), var('tmp.2')),
         unary(negate, var('tmp.2'), var('tmp.3')),
         return(var('tmp.3'))
+    ])).
+
+test(p3) :-
+    tack(program(function(main, return(
+        binary(add, constant(2), binary(multiply, constant(3), constant(4)))))), Tacky),
+    Tacky = program(function(main, [
+        binary(multiply, constant(3), constant(4), var('tmp.1')),
+        binary(add, constant(2), var('tmp.1'), var('tmp.2')),
+        return(var('tmp.2'))
     ])).
 
 :- end_tests(tacky).
