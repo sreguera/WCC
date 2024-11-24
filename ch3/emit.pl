@@ -51,6 +51,11 @@ op_emit(neg, "negl").
 op_emit(add, "addl").
 op_emit(sub, "subl").
 op_emit(mult, "imull").
+op_emit(and, "andl").
+op_emit(or,  "orl").
+op_emit(xor, "xorl").
+op_emit(sal, "sall").
+op_emit(sar, "sarl").
 
 exp_emit(reg(R), Out) :-
     reg_emit(R, Out).
@@ -60,6 +65,7 @@ exp_emit(imm(Int), Out) :-
     format(string(Out), "$~d", [Int]).
 
 reg_emit(ax, "%eax").
+reg_emit(cx, "%ecx").
 reg_emit(dx, "%edx").
 reg_emit(r10, "%r10d").
 reg_emit(r11, "%r11d").

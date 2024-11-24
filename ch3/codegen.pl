@@ -53,6 +53,11 @@ op_asm(negate, neg).
 op_asm(add, add).
 op_asm(subtract, sub).
 op_asm(multiply, mult).
+op_asm(and, and).
+op_asm(or, or).
+op_asm(xor, xor).
+op_asm(lshift, sal).
+op_asm(rshift, sar).
 
 val_asm(constant(Int), imm(Int)).
 val_asm(var(Ident), pseudo(Ident)).
@@ -111,33 +116,53 @@ fixup(Insts0, Insts) :-
     maplist(rep_reg, Insts0, Insts1),
     flatten(Insts1, Insts).
 
+% Can't have two memory arguments
 rep_reg(mov(stack(X), stack(Y)), Insts) :- !,
     Insts = [
         mov(stack(X), reg(r10)),
         mov(reg(r10), stack(Y))
     ].
 rep_reg(binary(add, stack(X), stack(Y)), Insts) :- !,
-    Insts = [
-        mov(stack(X), reg(r10)),
-        binary(add, reg(r10), stack(Y))
-    ].
+    rep_src_by_r10(add, stack(X), stack(Y), Insts).
 rep_reg(binary(sub, stack(X), stack(Y)), Insts) :- !,
+    rep_src_by_r10(sub, stack(X), stack(Y), Insts).
+rep_reg(binary(and, stack(X), stack(Y)), Insts) :- !,
+    rep_src_by_r10(and, stack(X), stack(Y), Insts).
+rep_reg(binary(or, stack(X), stack(Y)), Insts) :- !,
+    rep_src_by_r10(or, stack(X), stack(Y), Insts).
+rep_reg(binary(xor, stack(X), stack(Y)), Insts) :- !,
+    rep_src_by_r10(xor, stack(X), stack(Y), Insts).
+% count must be imm or cl. Use the reg and don't worry.
+rep_reg(binary(sal, X, Y), Insts) :- !,
     Insts = [
-        mov(stack(X), reg(r10)),
-        binary(sub, reg(r10), stack(Y))
+        mov(X, reg(cx)),
+        binary(sal, reg(cx), Y)
     ].
+rep_reg(binary(sar, X, Y), Insts) :- !,
+    Insts = [
+        mov(X, reg(cx)),
+        binary(sar, reg(cx), Y)
+    ].
+% mult can't use memory as destination
 rep_reg(binary(mult, X, stack(Y)), Insts) :- !,
     Insts = [
         mov(stack(Y), reg(r11)),
         binary(mult, X, reg(r11)),
         mov(reg(r11), stack(Y))
     ].
+% idiv can't operate on a constant
 rep_reg(idiv(imm(V)), Insts) :- !,
     Insts = [
         mov(imm(V), reg(r10)),
         idiv(reg(r10))
     ].
 rep_reg(I, I).
+
+rep_src_by_r10(Op, X, Y, Insts) :-
+    Insts = [
+        mov(X, reg(r10)),
+        binary(Op, reg(r10), Y)
+    ].
 
 
 %-----------%

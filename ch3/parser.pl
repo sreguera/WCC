@@ -17,6 +17,7 @@ The parser parses a list of tokens into the AST of a program.
         | binary(Binop, Exp, Exp)
     * Unop = complement | negate
     * Binop = add | subtract | multiply | divide | remainder
+        | and | or | xor | lshift | rshift
 */
 
 program(program(FunctionDefinition)) -->
@@ -54,11 +55,16 @@ binary_op(Op, Prec) -->
     { bin_op(C, Op, Prec)
     }.
 
-bin_op('+', add,       45).
-bin_op('-', subtract,  45).
-bin_op('*', multiply,  50).
-bin_op('/', divide,    50).
-bin_op('%', remainder, 50).
+bin_op('*',  multiply,  50).
+bin_op('/',  divide,    50).
+bin_op('%',  remainder, 50).
+bin_op('+',  add,       45).
+bin_op('-',  subtract,  45).
+bin_op('<<', lshift,    40).
+bin_op('>>', rshift,    40).
+bin_op('&',  and,       25).
+bin_op('^',  xor,       20).
+bin_op('|',  or,        15).
 
 factor(Exp) -->
     ( constant(Exp)
@@ -132,5 +138,11 @@ test(exp) :-
     lex("~2 + 3", Tokens),
     once(phrase(exp(Exp), Tokens)),
     Exp = binary(add, unary(complement, constant(2)), constant(3)).
+
+test(exp) :-
+    lex("2 & 3", Tokens),
+    once(phrase(exp(Exp), Tokens)),
+    Exp = binary(and, constant(2), constant(3)).
+
 
 :- end_tests(parser).

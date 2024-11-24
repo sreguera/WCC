@@ -14,6 +14,7 @@ A token is one of:
     | return | int | void
     | '(' | ')' | '{' | '}' | ';' | '--' | '~' | '-'
     | '+' | '*' | '/' | '%'
+    | '&' | '|' | '^' | '<<' | '>>'
 */
 
 token(T) -->
@@ -83,6 +84,11 @@ punctuator('*') -->  "*", !.
 punctuator('/') -->  "/", !.
 punctuator('%') -->  "%", !.
 punctuator(';') -->  ";", !.
+punctuator('&') -->  "&", !.
+punctuator('|') -->  "|", !.
+punctuator('^') -->  "^", !.
+punctuator('<<') -->  "<<", !.
+punctuator('>>') -->  ">>", !.
 
 white_space(white_space(S)) -->
     [S],
@@ -141,8 +147,11 @@ test(number_followed_by_letter_fails) :-
     C = 0'a.
 
 test(punctuators) :-
-    lex("(){};--~-+*/%", Ts),
-    Ts = ['(', ')', '{', '}', ';', '--', '~', '-', '+', '*', '/', '%'].
+    lex("(){};--~-+*/%&|^<<>>", Ts),
+    Ts = [
+        '(', ')', '{', '}', ';', '--', '~', '-', '+', '*', '/', '%',
+        '&', '|', '^', '<<', '>>'
+    ].
 
 test(invalid_char_fails) :-
     catch(lex("?", _), invalid_char(C), true),

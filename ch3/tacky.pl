@@ -19,6 +19,7 @@ The generator convertes the AST to Tacky IL.
         | var(Name:atom)
     * Unop = complement | negate
     * Binop = add | subtract | multiply | divide | remainder
+        | and | or | xor | lshift | rshift
 */
 
 tack(program(FunDef), program(FunDefTacky)) :-
@@ -30,7 +31,7 @@ tack(function(Name, Body), function(Name, Instructions)) :-
 
 stmt_insts(return(Exp), Insts) :-
     exp_insts(Exp, Result, Insts, X),
-    X = [return(Result)]. 
+    X = [return(Result)]. %TODO??? see Xs below
 
 exp_insts(constant(Int), Dest, T, T) :-
     Dest = constant(Int).
