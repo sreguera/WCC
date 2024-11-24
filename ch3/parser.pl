@@ -73,7 +73,7 @@ unary(unary(Op, Exp)) -->
     [T],
     { unary_op(T, Op)
     },
-    exp(Exp).
+    factor(Exp).
 
 unary_op('-', negate).
 unary_op('~', complement).
@@ -127,5 +127,10 @@ test(exp) :-
     Exp = binary(subtract,
             binary(add, constant(2), constant(3)),
             constant(4)).
+
+test(exp) :-
+    lex("~2 + 3", Tokens),
+    once(phrase(exp(Exp), Tokens)),
+    Exp = binary(add, unary(complement, constant(2)), constant(3)).
 
 :- end_tests(parser).
