@@ -19,31 +19,35 @@ emit(function(Name, Instructions)) :-
     format("~s:~n", [Name]),
     format("    pushq   %rbp~n"),
     format("    movq    %rsp, %rbp~n"),
-    maplist(emit, Instructions).
-emit(mov(Source, Dest)) :-
+    maplist(inst_emit, Instructions).
+
+inst_emit(mov(Source, Dest)) :-
     exp_emit(Source, SOut),
     exp_emit(Dest, EOut),
     format("    movl    ~s, ~s~n", [SOut, EOut]).
-emit(ret) :-
+inst_emit(ret) :-
     format("    movq    %rbp, %rsp~n"),
     format("    popq    %rbp~n"),
     format("    ret~n").
-emit(unary(Op, Val)) :-
+inst_emit(unary(Op, Val)) :-
     op_emit(Op, OpOut),
     exp_emit(Val, VOut),
     format("    ~s  ~s~n", [OpOut, VOut]).
-emit(allocate_stack(Size)) :-
+inst_emit(allocate_stack(Size)) :-
     format("    subq    $~d, %rsp~n", [Size]).
 
 op_emit(not, "notl").
 op_emit(neg, "negl").
 
-exp_emit(reg(ax), "%eax") :- !.
-exp_emit(reg(r10), "%r10d") :- !.
+exp_emit(reg(R), Out) :-
+    reg_emit(R, Out).
 exp_emit(stack(Offset), Out) :-
     format(string(Out), "~d(%rbp)", [Offset]).
 exp_emit(imm(Int), Out) :-
     format(string(Out), "$~d", [Int]).
+
+reg_emit(ax, "%eax").
+reg_emit(r10, "%r10d").
 
 
 %-----------%
