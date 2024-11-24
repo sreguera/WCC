@@ -71,25 +71,18 @@ digit(C) -->
     {   code_type(C, digit)
     }.
 
-punctuator('--') -->
-    "--".
-punctuator(P) -->
-    [C],
-    {   punctuator_char(C),
-        atom_codes(P, [C])
-    }.
-
-punctuator_char(0'().
-punctuator_char(0')).
-punctuator_char(0'{).
-punctuator_char(0'}).
-punctuator_char(0'~).
-punctuator_char(0'-).
-punctuator_char(0'+).
-punctuator_char(0'*).
-punctuator_char(0'/).
-punctuator_char(0'%).
-punctuator_char(0';).
+punctuator('(') -->  "(", !.
+punctuator(')') -->  ")", !.
+punctuator('{') -->  "{", !.
+punctuator('}') -->  "}", !.
+punctuator('~') -->  "~", !.
+punctuator('--') -->  "--", !.
+punctuator('-') -->  "-", !.
+punctuator('+') -->  "+", !.
+punctuator('*') -->  "*", !.
+punctuator('/') -->  "/", !.
+punctuator('%') -->  "%", !.
+punctuator(';') -->  ";", !.
 
 white_space(white_space(S)) -->
     [S],
