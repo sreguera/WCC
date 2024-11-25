@@ -2,7 +2,6 @@
 */
 :- module(tacky, [tack/2]).
 
-
 /** <module> Tacky
  
 Tacky generator for Chapter 2 of "Writing a C Compiler".
