@@ -208,8 +208,8 @@ rep_reg(binary(mult, X, stack(Y)), Insts) :- !,
 % cmp can't have two memory ops or an imm target
 rep_reg(cmp(stack(X), stack(Y)), Insts) :- !,
     Insts = [
-        mov(X, reg(r10)),
-        cmp(reg(r10), Y)
+        mov(stack(X), reg(r10)),
+        cmp(reg(r10), stack(Y))
     ].
 rep_reg(cmp(X, imm(Y)), Insts) :- !,
     Insts = [
