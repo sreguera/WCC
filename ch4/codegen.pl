@@ -131,6 +131,14 @@ replace([I0|I0s], S0, [I|Is], S) :-
 
 rep_inst(ret, S, ret, S).
 rep_inst(cdq, S, cdq, S).
+rep_inst(jmp(T), S, jmp(T), S).
+rep_inst(label(T), S, label(T), S).
+rep_inst(jmp_cc(Op, T), S, jmp_cc(Op, T), S).
+rep_inst(set_cc(Op, Val0), S0, set_cc(Op, Val), S) :-
+    rep_val(Val0, S0, Val, S).
+rep_inst(cmp(Val0, Val1), S0, cmp(Val2, Val3), S) :-
+    rep_val(Val0, S0, Val2, S1),
+    rep_val(Val1, S1, Val3, S).
 rep_inst(idiv(Val0), S0, idiv(Val), S) :-
     rep_val(Val0, S0, Val, S).
 rep_inst(unary(Op, Val0), S0, unary(Op, Val), S) :-
@@ -197,12 +205,24 @@ rep_reg(binary(mult, X, stack(Y)), Insts) :- !,
         binary(mult, X, reg(r11)),
         mov(reg(r11), stack(Y))
     ].
+% cmp can't have two memory ops or an imm target
+rep_reg(cmp(stack(X), stack(Y)), Insts) :- !,
+    Insts = [
+        mov(X, reg(r10)),
+        cmp(reg(r10), Y)
+    ].
+rep_reg(cmp(X, imm(Y)), Insts) :- !,
+    Insts = [
+        mov(imm(Y), reg(r11)),
+        cmp(X, reg(r11))
+    ].
 % idiv can't operate on a constant
 rep_reg(idiv(imm(V)), Insts) :- !,
     Insts = [
         mov(imm(V), reg(r10)),
         idiv(reg(r10))
     ].
+% Any other thing goes unchanged
 rep_reg(I, I).
 
 rep_src_by_r10(Op, X, Y, Insts) :-
