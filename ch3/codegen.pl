@@ -156,6 +156,7 @@ rep_reg(idiv(imm(V)), Insts) :- !,
         mov(imm(V), reg(r10)),
         idiv(reg(r10))
     ].
+% Any other thing goes unchanged
 rep_reg(I, I).
 
 rep_src_by_r10(Op, X, Y, Insts) :-

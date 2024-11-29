@@ -78,11 +78,13 @@ fixup(Insts0, Insts) :-
     maplist(rep_reg, Insts0, Insts1),
     flatten(Insts1, Insts).
 
+% Can't have two memory arguments
 rep_reg(mov(stack(X), stack(Y)), Insts) :- !,
     Insts = [
         mov(stack(X), reg(r10)),
         mov(reg(r10), stack(Y))
     ].
+% Any other thing goes unchanged
 rep_reg(I, I).
 
 
