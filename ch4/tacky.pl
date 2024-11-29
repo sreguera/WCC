@@ -56,7 +56,7 @@ binary_insts(and, Left, Right, Dest, Is, T) :- !, %TODO replace ! with index on 
     I3 = [jump_if_zero(DestR, False)|I4],
     I4 = [
         copy(constant(1), Dest),
-        jump(end),
+        jump(End),
         label(False),
         copy(constant(0), Dest),
         label(End)
@@ -73,7 +73,7 @@ binary_insts(or, Left, Right, Dest, Is, T) :- !,
     I3 = [jump_if_not_zero(DestR, True)|I4],
     I4 = [
         copy(constant(0), Dest),
-        jump(end),
+        jump(End),
         label(True),
         copy(constant(1), Dest),
         label(End)
@@ -135,7 +135,7 @@ test(and) :-
         jump_if_zero(constant(8), and_false1),
         jump_if_zero(constant(0), and_false1),
         copy(constant(1), var('tmp.1')),
-        jump(end),
+        jump(and_end1),
         label(and_false1),
         copy(constant(0), var('tmp.1')),
         label(and_end1)
@@ -148,7 +148,7 @@ test(or) :-
         jump_if_not_zero(constant(8), or_true1),
         jump_if_not_zero(constant(0), or_true1),
         copy(constant(0), var('tmp.1')),
-        jump(end),
+        jump(or_end1),
         label(or_true1),
         copy(constant(1), var('tmp.1')),
         label(or_end1)
