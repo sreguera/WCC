@@ -9,8 +9,8 @@ Parser for Chapter 4 of "Writing a C Compiler".
 
 The parser parses a list of tokens into the AST of a program.
     * Program = program(FunctionDefinition)
-    * FunctionDefinition = function(Name:atom, Body)
-    * Body = return(Exp)
+    * FunctionDefinition = function(Name:atom, Body:statement)
+    * Statement = return(Exp)
     * Exp = 
         | constant(Value:int)
         | unary(Unop, Exp)
