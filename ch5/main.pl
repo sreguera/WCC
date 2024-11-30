@@ -3,6 +3,7 @@
 :- use_module(library(main)).
 :- use_module(lexer).
 :- use_module(parser).
+:- use_module(semantics).
 :- use_module(tacky).
 :- use_module(codegen).
 :- use_module(emit).
@@ -17,15 +18,19 @@ main(Argv) :-
     ;   parse(Tokens, Ast),
         (   Flag = '--parse'
         ->  true
-        ;   tack(Ast, Tacky),
-            (   Flag = '--tacky'
+        ;   validate(Ast, ValAst),
+            (   Flag = '--validate'
             ->  true
-            ;   generate(Tacky, Asm),
-                (   Flag = '--codegen'
+            ;   tack(ValAst, Tacky),
+                (   Flag = '--tacky'
                 ->  true
-                ;   emit(Asm, AsmText),
-                    open(SPath, write, SStream),
-                    with_output_to(SStream, write(AsmText))
+                ;   generate(Tacky, Asm),
+                    (   Flag = '--codegen'
+                    ->  true
+                    ;   emit(Asm, AsmText),
+                        open(SPath, write, SStream),
+                        with_output_to(SStream, write(AsmText))
+                    )
                 )
             )
         )
