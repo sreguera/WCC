@@ -5,7 +5,7 @@
 
 /** <module> Parser
  
-Parser for Chapter 4 of "Writing a C Compiler".
+Parser for Chapter 5 of "Writing a C Compiler".
 
 The parser parses a list of tokens into the AST of a program.
     * Program = program(FunctionDefinition)
@@ -175,12 +175,13 @@ test(parse3) :-
     Program = program(function(main, [s(return(binary(add,constant(1),constant(2))))])).
 
 test(parse5) :-
-    lex("int main(void) { int a = 5; int b; return 2; }", Tokens),
+    lex("int main(void) { int a = 5; int b; b = a - 3; return b; }", Tokens),
     parse(Tokens, Program),
     Program = program(function(main, [
         d(declaration(a, constant(5))),
         d(declaration(b, none)),
-        s(return(constant(2)))
+        s(expression(assignment(var(b), binary(subtract, var(a), constant(3))))),
+        s(return(var(b)))
     ])).
 
 test(exp) :-
