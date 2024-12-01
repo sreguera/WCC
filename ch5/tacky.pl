@@ -59,15 +59,12 @@ stmt_insts(expression(Exp), Insts, T) :-
     exp_insts(Exp, _Result, Insts, T).
 stmt_insts(null, T, T).
 
-exp_insts(constant(Int), Dest, T, T) :-
-    Dest = constant(Int).
-exp_insts(var(Id), Dest, T, T) :-
-    Dest = var(Id).
+exp_insts(constant(Int), constant(Int), T, T).
+exp_insts(var(Id), var(Id), T, T).
 exp_insts(unary(Op, Inner), Dest, Is, T) :-
-    exp_insts(Inner, Dest0, Is, X),
-    gensym('tmp.', Temp),
-    Dest = var(Temp),
-    X = [unary(Op, Dest0, Dest)|T].
+    exp_insts(Inner, Dest0, Is, I1),
+    mk_tmpvar(Dest),
+    I1 = [unary(Op, Dest0, Dest)|T].
 exp_insts(binary(Op, Left, Right), Dest, Is, T) :-
     binary_insts(Op, Left, Right, Dest, Is, T).
 exp_insts(assignment(Var, Exp), Var, Is, T) :-
@@ -76,46 +73,46 @@ exp_insts(assignment(Var, Exp), Var, Is, T) :-
 
 binary_insts(and, Left, Right, Dest, Is, T) :- !, %TODO replace ! with index on op
     exp_insts(Left, DestL, Is, I1),
-    I1 = [jump_if_zero(DestL, False)|I2],
+    I1 = [jump_if_zero(DestL, FalseLabel)|I2],
     exp_insts(Right, DestR, I2, I3),
-    I3 = [jump_if_zero(DestR, False)|I4],
-    I4 = [
+    I3 = [
+        jump_if_zero(DestR, FalseLabel),
         copy(constant(1), Dest),
-        jump(End),
-        label(False),
+        jump(EndLabel),
+        label(FalseLabel),
         copy(constant(0), Dest),
-        label(End)
+        label(EndLabel)
         | T
     ],
-    gensym('tmp.', Temp),
-    Dest = var(Temp),
-    gensym('and_end', End),
-    gensym('and_false', False).
+    mk_tmpvar(Dest),
+    gensym('and_end', EndLabel),
+    gensym('and_false', FalseLabel).
 binary_insts(or, Left, Right, Dest, Is, T) :- !,
     exp_insts(Left, DestL, Is, I1),
-    I1 = [jump_if_not_zero(DestL, True)|I2],
+    I1 = [jump_if_not_zero(DestL, TrueLabel)|I2],
     exp_insts(Right, DestR, I2, I3),
-    I3 = [jump_if_not_zero(DestR, True)|I4],
-    I4 = [
+    I3 = [
+        jump_if_not_zero(DestR, TrueLabel),
         copy(constant(0), Dest),
-        jump(End),
-        label(True),
+        jump(EndLabel),
+        label(TrueLabel),
         copy(constant(1), Dest),
-        label(End)
+        label(EndLabel)
         | T
     ],
-    gensym('tmp.', Temp),
-    Dest = var(Temp),
-    gensym('or_end', End),
-    gensym('or_true', True).
+    mk_tmpvar(Dest),
+    gensym('or_end', EndLabel),
+    gensym('or_true', TrueLabel).
 binary_insts(Op, Left, Right, Dest, Is, T) :-
     Op \= and,
     Op \= or,
     exp_insts(Left, DestL, Is, I1),
     exp_insts(Right, DestR, I1, I2),
-    gensym('tmp.', Temp),
-    Dest = var(Temp),
+    mk_tmpvar(Dest),
     I2 = [binary(Op, DestL, DestR, Dest)|T].
+
+mk_tmpvar(var(UniqueName)) :-
+    gensym('tmp.', UniqueName).
 
 
 %-----------%

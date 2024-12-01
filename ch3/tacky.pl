@@ -29,22 +29,22 @@ tack(function(Name, Body), function(Name, Instructions)) :-
     stmt_insts(Body, Instructions).
 
 stmt_insts(return(Exp), Insts) :-
-    exp_insts(Exp, Result, Insts, X),
-    X = [return(Result)]. %TODO??? see Xs below
+    exp_insts(Exp, Result, Insts, I1),
+    I1 = [return(Result)].
 
-exp_insts(constant(Int), Dest, T, T) :-
-    Dest = constant(Int).
+exp_insts(constant(Int), constant(Int), T, T).
 exp_insts(unary(Op, Inner), Dest, Is, T) :-
-    exp_insts(Inner, Dest0, Is, X),
-    gensym('tmp.', Temp),
-    Dest = var(Temp),
-    X = [unary(Op, Dest0, Dest)|T].
+    exp_insts(Inner, Dest0, Is, I1),
+    mk_tmpvar(Dest),
+    I1 = [unary(Op, Dest0, Dest)|T].
 exp_insts(binary(Op, Left, Right), Dest, Is, T) :-
     exp_insts(Left, DestL, Is, I1),
     exp_insts(Right, DestR, I1, I2),
-    gensym('tmp.', Temp),
-    Dest = var(Temp),
+    mk_tmpvar(Dest),
     I2 = [binary(Op, DestL, DestR, Dest)|T].
+
+mk_tmpvar(var(UniqueName)) :-
+    gensym('tmp.', UniqueName).
 
 
 %-----------%
