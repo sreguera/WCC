@@ -12,11 +12,12 @@ A token is one of:
     | identifier(atom)
     | constant(int)
     | return | int | void
-    | '(' | ')' | '{' | '}' | ';' | '--' | '~' | '-'
-    | '+' | '*' | '/' | '%'
+    | '(' | ')' | '{' | '}' | ';' 
+    | '++' | '--' | '~' 
+    | '+' | '-' | '*' | '/' | '%'
     | '&' | '|' | '^' | '<<' | '>>'
     | '!' | '&&' | '||' | '==' | '!=' | '<' | '>' | '<=' | '>='
-    | '='
+    | '=' | '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '>>=' | '<<='
 */
 
 token(T) -->
@@ -74,33 +75,44 @@ digit(C) -->
     {   code_type(C, digit)
     }.
 
-punctuator('(') -->  "(", !.
-punctuator(')') -->  ")", !.
-punctuator('{') -->  "{", !.
-punctuator('}') -->  "}", !.
-punctuator('~') -->  "~", !.
-punctuator('--') -->  "--", !.
-punctuator('-') -->  "-", !.
-punctuator('+') -->  "+", !.
-punctuator('*') -->  "*", !.
-punctuator('/') -->  "/", !.
-punctuator('%') -->  "%", !.
-punctuator(';') -->  ";", !.
-punctuator('&&') -->  "&&", !.
-punctuator('&') -->  "&", !.
-punctuator('||') -->  "||", !.
-punctuator('|') -->  "|", !.
-punctuator('^') -->  "^", !.
-punctuator('<<') -->  "<<", !.
-punctuator('<=') -->  "<=", !.
-punctuator('<') -->  "<", !.
-punctuator('>>') -->  ">>", !.
-punctuator('>=') -->  ">=", !.
-punctuator('>') -->  ">", !.
-punctuator('!=') -->  "!=", !.
-punctuator('!') -->  "!", !.
-punctuator('==') -->  "==", !.
-punctuator('=') -->  "=", !.
+punctuator('(')   -->  "(", !.
+punctuator(')')   -->  ")", !.
+punctuator('{')   -->  "{", !.
+punctuator('}')   -->  "}", !.
+punctuator('~')   -->  "~", !.
+punctuator('--')  -->  "--", !.
+punctuator('-=')  -->  "-=", !.
+punctuator('-')   -->  "-", !.
+punctuator('++')  -->  "++", !.
+punctuator('+=')  -->  "+=", !.
+punctuator('+')   -->  "+", !.
+punctuator('*=')  -->  "*=", !.
+punctuator('*')   -->  "*", !.
+punctuator('/=')  -->  "/=", !.
+punctuator('/')   -->  "/", !.
+punctuator('%=')  -->  "%=", !.
+punctuator('%')   -->  "%", !.
+punctuator(';')   -->  ";", !.
+punctuator('&&')  -->  "&&", !.
+punctuator('&=')  -->  "&=", !.
+punctuator('&')   -->  "&", !.
+punctuator('||')  -->  "||", !.
+punctuator('|=')  -->  "|=", !.
+punctuator('|')   -->  "|", !.
+punctuator('^=')  -->  "^=", !.
+punctuator('^')   -->  "^", !.
+punctuator('<<=') -->  "<<=", !.
+punctuator('<<')  -->  "<<", !.
+punctuator('<=')  -->  "<=", !.
+punctuator('<')   -->  "<", !.
+punctuator('>>=') -->  ">>=", !.
+punctuator('>>')  -->  ">>", !.
+punctuator('>=')  -->  ">=", !.
+punctuator('>')   -->  ">", !.
+punctuator('!=')  -->  "!=", !.
+punctuator('!')   -->  "!", !.
+punctuator('==')  -->  "==", !.
+punctuator('=')   -->  "=", !.
 
 white_space(white_space(S)) -->
     [S],
@@ -159,12 +171,12 @@ test(number_followed_by_letter_fails) :-
     C = 0'a.
 
 test(punctuators) :-
-    lex("(){};--~-+*/%&|^<<>>!&&||==!=<><=>==", Ts),
+    lex("(){};--~-+*/%&|^<<>>!&&||==!=<><=>==+=-=*=/=%=&=|=^=>>=<<=++", Ts),
     Ts = [
         '(', ')', '{', '}', ';', '--', '~', '-', '+', '*', '/', '%',
         '&', '|', '^', '<<', '>>',
         '!', '&&', '||', '==', '!=', '<', '>', '<=', '>=',
-        '='
+        '=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '>>=', '<<=', '++'
     ].
 
 test(invalid_char_fails) :-

@@ -76,12 +76,13 @@ exp(MinPrec, Exp) -->
     exp_cont(MinPrec, P, Exp).
 
 exp_cont(MinPrec, Left, Exp) -->
-    binary_op(assign, OpPrec),
+    binary_op(Op, OpPrec, right),
     { OpPrec >= MinPrec },
     exp(OpPrec, Right),
-    exp_cont(MinPrec, assignment(Left, Right), Exp).
+    { bin_exp(Op, Left, Right, ContExp) },
+    exp_cont(MinPrec, ContExp, Exp).
 exp_cont(MinPrec, Left, Exp) -->
-    binary_op(Op, OpPrec),
+    binary_op(Op, OpPrec, left),
     { OpPrec >= MinPrec,
       MinPrec1 is OpPrec + 1
     },
@@ -90,30 +91,61 @@ exp_cont(MinPrec, Left, Exp) -->
 exp_cont(_, Left, Left) -->
     [].
 
-binary_op(Op, Prec) -->
+bin_exp(Op, Left, Right, Expr) :-
+    (   assign_op(Op, AOp)
+    ->  (   AOp = none
+        ->  Expr = assignment(Left, Right)
+        ;   Expr = assignment(Left, binary(AOp, Left, Right))
+        )
+    ;   Expr = binary(Op, Left, Right)
+    ).
+
+binary_op(Op, Prec, Assoc) -->
     [C],
-    { bin_op(C, Op, Prec)
+    { bin_op(C, Op, Prec, Assoc)
     }.
 
-bin_op('*',  multiply,  50).
-bin_op('/',  divide,    50).
-bin_op('%',  remainder, 50).
-bin_op('+',  add,       45).
-bin_op('-',  subtract,  45).
-bin_op('<<', lshift,    40).
-bin_op('>>', rshift,    40).
-bin_op('<',  less_than, 35).
-bin_op('<=', less_eq,   35).
-bin_op('>',  greater_than, 35).
-bin_op('>=', greater_eq,   35).
-bin_op('==', equal,     30).
-bin_op('!=', not_equal, 30).
-bin_op('&',  bit_and,   25).
-bin_op('^',  bit_xor,   20).
-bin_op('|',  bit_or,    15).
-bin_op('&&', and,       10).
-bin_op('||', or,        5).
-bin_op('=',  assign,    1).
+bin_op('*',   multiply,         50, left).
+bin_op('/',   divide,           50, left).
+bin_op('%',   remainder,        50, left).
+bin_op('+',   add,              45, left).
+bin_op('-',   subtract,         45, left).
+bin_op('<<',  lshift,           40, left).
+bin_op('>>',  rshift,           40, left).
+bin_op('<',   less_than,        35, left).
+bin_op('<=',  less_eq,          35, left).
+bin_op('>',   greater_than,     35, left).
+bin_op('>=',  greater_eq,       35, left).
+bin_op('==',  equal,            30, left).
+bin_op('!=',  not_equal,        30, left).
+bin_op('&',   bit_and,          25, left).
+bin_op('^',   bit_xor,          20, left).
+bin_op('|',   bit_or,           15, left).
+bin_op('&&',  and,              10, left).
+bin_op('||',  or,                5, left).
+bin_op('=',   assign,            1, right).
+bin_op('+=',  add_assign,        1, right).
+bin_op('-=',  subtract_assign,   1, right).
+bin_op('*=',  multiply_assign,   1, right).
+bin_op('/=',  divide_assign,     1, right).
+bin_op('%=',  remainder_assign,  1, right).
+bin_op('&=',  and_assign,        1, right).
+bin_op('|=',  or_assign,         1, right).
+bin_op('^=',  xor_assign,        1, right).
+bin_op('>>=', rshift_assign,     1, right).
+bin_op('<<=', lshift_assign,     1, right).
+
+assign_op(assign,           none).
+assign_op(add_assign,       add).
+assign_op(subtract_assign,  subtract).
+assign_op(multiply_assign,  multiply).
+assign_op(divide_assign,    divide).
+assign_op(remainder_assign, remainder).
+assign_op(and_assign,       bit_and).
+assign_op(or_assign,        bit_or).
+assign_op(xor_assign,       bit_xor).
+assign_op(rshift_assign,    rshift).
+assign_op(lshift_assign,    lshift).
 
 factor(Exp) -->
     ( constant(Exp)
