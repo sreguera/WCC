@@ -100,9 +100,9 @@ op_asm(negate, neg).
 op_asm(add, add).
 op_asm(subtract, sub).
 op_asm(multiply, mult).
-op_asm(and, and).
-op_asm(or, or).
-op_asm(xor, xor).
+op_asm(bit_and, and).
+op_asm(bit_or, or).
+op_asm(bit_xor, xor).
 op_asm(lshift, sal).
 op_asm(rshift, sar).
 
@@ -265,6 +265,26 @@ test(codegen) :-
         mov(imm(1), stack(-4)),
         binary(add, imm(2), stack(-4)),
         mov(stack(-4), reg(ax)),
+        ret
+    ])).
+
+test(codegen_bitwise) :-
+    Program = program(function(main, [
+        binary(less_than, constant(7), constant(5), var('tmp.1')),
+        binary(bit_xor, constant(5), var('tmp.1'), var('tmp.2')),
+        return(var('tmp.2'))
+    ])),
+    generate(Program, Asm),
+    Asm = program(function(main, [
+        allocate_stack(8),
+        mov(imm(7), reg(r11)),
+        cmp(imm(5), reg(r11)),
+        mov(imm(0), stack(-4)),
+        set_cc(l, stack(-4)),
+        mov(imm(5), stack(-8)),
+        mov(stack(-4), reg(r10)),
+        binary(xor, reg(r10), stack(-8)),
+        mov(stack(-8), reg(ax)),
         ret
     ])).
 
