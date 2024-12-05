@@ -46,6 +46,11 @@ validate_exp(var(Name), var(UniqueName), S, S) :-
     ;   throw(undefined_variable(Name))
     ).
 validate_exp(unary(Op, Val), unary(Op, ValVal), S0, S) :-
+    (   memberchk(Op, [pre_incr, pre_decr, post_incr, post_decr]),
+        Val \= var(_)
+    ->  throw(invalid_lvalue(Val))
+    ;   true
+    ),
     validate_exp(Val, ValVal, S0, S).
 validate_exp(binary(Op, Left, Right), binary(Op, ValLeft, ValRight), S0, S) :-
     validate_exp(Left, ValLeft, S0, S1),

@@ -154,26 +154,44 @@ factor(Exp) -->
     ; paren(Exp)
     ).
 
-constant(constant(Int)) -->
-    [constant(Int)].
+constant(PostfixExp) -->
+    [constant(Int)],
+    postfix_cont(constant(Int), PostfixExp).
 
-var(var(Id)) -->
-    [identifier(Id)].
+var(PostfixExp) -->
+    [identifier(Id)],
+    postfix_cont(var(Id), PostfixExp).
 
-unary(unary(Op, Exp)) -->
+unary(unary(Op, PostfixExp)) -->
     [T],
     { unary_op(T, Op)
     },
-    factor(Exp).
+    factor(Exp),
+    postfix_cont(Exp, PostfixExp).
 
 unary_op('-', negate).
 unary_op('~', complement).
 unary_op('!', not).
+unary_op('++', pre_incr).
+unary_op('--', pre_decr).
 
-paren(Exp) -->
+paren(PostfixExp) -->
     ['('],
-    exp(Exp),
-    [')'].
+    exp(Exp), 
+    [')'],
+    postfix_cont(Exp, PostfixExp).
+
+postfix_cont(In, Out) -->
+    [T],
+    { postfix_op(T, Op)
+    },    
+    postfix_cont(unary(Op, In), Out).
+postfix_cont(In, In) -->
+    [].
+
+postfix_op('++', post_incr).
+postfix_op('--', post_decr).
+
 
 %!  parse(+Tokens:[token], -Program) is det
 %
@@ -244,5 +262,15 @@ test(exp) :-
     lex("a = b = 5", Tokens),
     once(phrase(exp(Exp), Tokens)),
     Exp = assignment(var(a), assignment(var(b), constant(5))).
+
+test(exp) :-
+    lex("--a + -b++", Tokens),
+    once(phrase(exp(Exp), Tokens)),
+    Exp = binary(add, unary(pre_decr, var(a)), unary(negate, unary(post_incr, var(b)))).
+
+test(decl) :-
+    lex("int b = 3 + a++;", Tokens),
+    once(phrase(declaration(Decl), Tokens)),
+    Decl = declaration(b,binary(add,constant(3),unary(post_incr,var(a)))).
 
 :- end_tests(parser).

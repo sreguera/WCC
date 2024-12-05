@@ -62,14 +62,31 @@ stmt_insts(null, T, T).
 exp_insts(constant(Int), constant(Int), T, T).
 exp_insts(var(Id), var(Id), T, T).
 exp_insts(unary(Op, Inner), Dest, Is, T) :-
-    exp_insts(Inner, Dest0, Is, I1),
-    mk_tmpvar(Dest),
-    I1 = [unary(Op, Dest0, Dest)|T].
+    unary_insts(Op, Inner, Dest, Is, T).
 exp_insts(binary(Op, Left, Right), Dest, Is, T) :-
     binary_insts(Op, Left, Right, Dest, Is, T).
 exp_insts(assignment(Var, Exp), Var, Is, T) :-
     exp_insts(Exp, Dest, Is, I1),
     I1 = [copy(Dest, Var)|T].
+
+unary_insts(pre_incr, Inner, Dest0, Is, T) :- !,
+    exp_insts(Inner, Dest0, Is, I1),
+    I1 = [binary(add, Dest0, constant(1), Dest0)|T].
+unary_insts(pre_decr, Inner, Dest0, Is, T) :- !,
+    exp_insts(Inner, Dest0, Is, I1),
+    I1 = [binary(subtract, Dest0, constant(1), Dest0)|T].
+unary_insts(post_incr, Inner, Dest, Is, T) :- !,
+    exp_insts(Inner, Dest0, Is, I1),
+    mk_tmpvar(Dest),
+    I1 = [copy(Dest0, Dest), binary(add, Dest0, constant(1), Dest0)|T].
+unary_insts(post_decr, Inner, Dest, Is, T) :- !,
+    exp_insts(Inner, Dest0, Is, I1),
+    mk_tmpvar(Dest),
+    I1 = [copy(Dest0, Dest), binary(subtract, Dest0, constant(1), Dest0)|T].
+unary_insts(Op, Inner, Dest, Is, T) :-
+    exp_insts(Inner, Dest0, Is, I1),
+    mk_tmpvar(Dest),
+    I1 = [unary(Op, Dest0, Dest)|T].
 
 binary_insts(and, Left, Right, Dest, Is, T) :- !, %TODO replace ! with index on op
     exp_insts(Left, DestL, Is, I1),
