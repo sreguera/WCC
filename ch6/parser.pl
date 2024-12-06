@@ -23,6 +23,7 @@ The parser parses a list of tokens into the AST of a program.
         | unary(Unop, Exp)
         | binary(Binop, Exp, Exp)
         | assignment(Exp, Exp)
+        | conditional(Exp, Exp, Exp)
     * Unop = complement | negate | not
     * Binop = add | subtract | multiply | divide | remainder
         | bit_and | bit_or | bit_xor | lshift | rshift
@@ -92,8 +93,15 @@ exp(MinPrec, Exp) -->
     exp_cont(MinPrec, P, Exp).
 
 exp_cont(MinPrec, Left, Exp) -->
+    binary_op(cond, OpPrec, right),
+    exp(0, Middle),
+    [':'],
+    exp(OpPrec, Right),
+    { ContExp = conditional(Left, Middle, Right) },
+    exp_cont(MinPrec, ContExp, Exp).
+exp_cont(MinPrec, Left, Exp) -->
     binary_op(Op, OpPrec, right),
-    { OpPrec >= MinPrec },
+    { Op \= cond, OpPrec >= MinPrec },
     exp(OpPrec, Right),
     { bin_exp(Op, Left, Right, ContExp) },
     exp_cont(MinPrec, ContExp, Exp).
@@ -139,6 +147,7 @@ bin_op('^',   bit_xor,          20, left).
 bin_op('|',   bit_or,           15, left).
 bin_op('&&',  and,              10, left).
 bin_op('||',  or,                5, left).
+bin_op('?',   cond,              3, right).
 bin_op('=',   assign,            1, right).
 bin_op('+=',  add_assign,        1, right).
 bin_op('-=',  subtract_assign,   1, right).
@@ -297,5 +306,10 @@ test(decl) :-
     lex("int b = 3 + a++;", Tokens),
     once(phrase(declaration(Decl), Tokens)),
     Decl = declaration(b,binary(add,constant(3),unary(post_incr,var(a)))).
+
+test(cond) :-
+    lex("a ? b ? 1 : 2 : 3", Tokens),
+    once(phrase(exp(Exp), Tokens)),
+    Exp = conditional(var(a), conditional(var(b), constant(1), constant(2)), constant(3)).
 
 :- end_tests(parser).
