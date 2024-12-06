@@ -94,6 +94,7 @@ exp(MinPrec, Exp) -->
 
 exp_cont(MinPrec, Left, Exp) -->
     binary_op(cond, OpPrec, right),
+    { OpPrec >= MinPrec },
     exp(0, Middle),
     [':'],
     exp(OpPrec, Right),
@@ -311,5 +312,10 @@ test(cond) :-
     lex("a ? b ? 1 : 2 : 3", Tokens),
     once(phrase(exp(Exp), Tokens)),
     Exp = conditional(var(a), conditional(var(b), constant(1), constant(2)), constant(3)).
+
+test(cond_prec) :-
+    lex("a || 0 ? 20 : 0", Tokens),
+    once(phrase(exp(Exp), Tokens)),
+    Exp = conditional(binary(or, var(a), constant(0)), constant(20), constant(0)).
 
 :- end_tests(parser).
