@@ -32,6 +32,7 @@ keyword(void).
 keyword(return).
 keyword(if).
 keyword(else).
+keyword(goto).
 
 identifier(I) -->
     identifier_start(C0),
@@ -160,8 +161,8 @@ lex(Source, Tokens) :-
 :- begin_tests(lexer).
 
 test(identifiers) :-
-    lex("abc return int void if else", Ts),
-    Ts = [identifier('abc'), return, int, void, if, else].
+    lex("abc return int void if else goto", Ts),
+    Ts = [identifier('abc'), return, int, void, if, else, goto].
 
 test(constants) :-
     lex("123 456", Ts),

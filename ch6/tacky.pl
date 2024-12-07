@@ -73,6 +73,12 @@ stmt_insts(if(Cond, Then, Else), Insts, T) :-
     I5 = [label(EndLabel)|T],
     gensym('if_else', ElseLabel),
     gensym('if_end', EndLabel).
+stmt_insts(goto(Label), Insts, T) :-
+    Insts = [jump(Label)|T].
+stmt_insts(labelled(Label, Stmt), Insts, T) :-
+    Insts = [label(Label)|I1],
+    stmt_insts(Stmt, I1, T).
+
 stmt_insts(null, T, T).
 
 exp_insts(constant(Int), constant(Int), T, T).

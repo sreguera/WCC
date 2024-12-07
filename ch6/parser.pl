@@ -16,6 +16,8 @@ The parser parses a list of tokens into the AST of a program.
         | return(Exp)
         | expression(Exp)
         | if(Condition:exp, Then:stmt, Else:stmt?)
+        | labelled(Name, Stmt)
+        | goto(Name)
         | null
     * Exp = 
         | constant(Value:int)
@@ -59,6 +61,8 @@ statement(Stmt) -->
     ( return(Stmt)
     ; exp_stmt(Stmt)
     ; if(Stmt)
+    ; labelled(Stmt)
+    ; goto(Stmt)
     ; null(Stmt)
     ).
 
@@ -81,6 +85,13 @@ if(if(Cond, Then, Else)) -->
 else(Stmt) -->
     ['else'],
     statement(Stmt).
+
+labelled(labelled(Name, Stmt)) -->
+    [identifier(Name), ':'],
+    statement(Stmt).
+
+goto(goto(Id)) -->
+    [goto, identifier(Id), ';'].
 
 null(null) -->
     [';'].

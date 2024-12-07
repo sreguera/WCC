@@ -9,7 +9,16 @@ Semantic analysis for Chapter 6 of "Writing a C Compiler".
 
 */
 
-validate(program(FunDef), program(ValFunDef)) :-
+validate(program(FunDef), Program) :-
+    validate_program(program(FunDef), Program),
+    label_program(Program).
+
+
+%-------------------------%
+%   VARIABLE RESOLUTION   %
+%-------------------------%
+
+validate_program(program(FunDef), program(ValFunDef)) :-
     reset_gensym,
     empty_assoc(S0),
     validate_function(FunDef, ValFunDef, S0, _S).
@@ -44,6 +53,9 @@ validate_stmt(if(Cond, Then, Else), if(ValCond, ValThen, ValElse), S0, S) :-
     ->  S = S2
     ;   validate_stmt(Else, ValElse, S2, S)
     ).
+validate_stmt(goto(Label), goto(Label), S, S).
+validate_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
+    validate_stmt(Stmt, ValStmt, S0, S).
 validate_stmt(null, null, S, S).
 
 validate_exp(constant(Int), constant(Int), S, S).
@@ -77,7 +89,50 @@ mk_varname(Name, UniqueName) :-
     gensym('var.', Unique),
     atom_concat('var.', Id, Unique),
     atomic_list_concat(['var', Name, Id], '.', UniqueName).
-    
+
+%----------------------%
+%   LABEL RESOLUTION   %
+%----------------------%
+
+label_program(program(FunDef)) :-
+    label_function(FunDef).
+
+label_function(function(_Name, Body)) :-
+    S0 = state([], []),
+    foldl(label_item, Body, S0, state(Labels, Gotos)),
+    subtract(Gotos, Labels, Undefined),
+    (   Undefined = [L|_]
+    ->  throw(undefined_label(L))
+    ;   true
+    ).
+
+label_item(d(_Decl), S, S).
+label_item(s(Stmt), S0, S) :-
+    label_stmt(Stmt, S0, S).
+
+label_stmt(return(_Exp), S, S).
+label_stmt(expression(_Exp), S, S).
+label_stmt(if(_Cond, Then, Else), S0, S) :-
+    label_stmt(Then, S0, S1),
+    (   Else = none
+    ->  S = S1
+    ;   label_stmt(Else, S1, S)
+    ).
+label_stmt(goto(Label), S0, S) :-
+    S0 = state(Labels, Gotos),
+    (   memberchk(Label, Gotos)
+    ->  true
+    ;   S = state(Labels, [Label|Gotos])
+    ).
+label_stmt(labelled(Label, Stmt), S0, S) :-
+    S0 = state(Labels, Gotos),
+    (   memberchk(Label, Labels)
+    ->  throw(duplicated_label(Label))
+    ;   S1 = state([Label|Labels], Gotos),
+        label_stmt(Stmt, S1, S)
+    ).
+label_stmt(null, S, S).
+
 
 %-----------%
 %   TESTS   %
