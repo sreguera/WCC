@@ -79,6 +79,9 @@ statement(Stmt) -->
     ; while(Stmt)
     ; do_while(Stmt)
     ; for(Stmt)
+    ; switch(Stmt)
+    ; case(Stmt)
+    ; default(Stmt)
     ; labelled(Stmt)
     ; goto(Stmt)
     ; null(Stmt)
@@ -140,6 +143,22 @@ for_init(init_decl(Decl)) -->
 for_init(init_exp(Exp)) -->
     optional(exp(Exp), {Exp = none}),
     [';'].
+
+switch(switch(Exp, Stmt)) -->
+    [switch, '('],
+    exp(Exp),
+    [')'],
+    statement(Stmt).
+
+case(case(Exp, Stmt)) -->
+    [case],
+    exp(Exp),
+    [':'],
+    statement(Stmt).
+
+default(default(Stmt)) -->
+    [default, ':'],
+    statement(Stmt).
 
 labelled(labelled(Name, Stmt)) -->
     [identifier(Name), ':'],

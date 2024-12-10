@@ -38,6 +38,9 @@ keyword(while).
 keyword(for).
 keyword(break).
 keyword(continue).
+keyword(switch).
+keyword(case).
+keyword(default).
 
 identifier(I) -->
     identifier_start(C0),
@@ -166,9 +169,9 @@ lex(Source, Tokens) :-
 :- begin_tests(lexer).
 
 test(identifiers) :-
-    lex("abc return int void if else goto do while for break continue", Ts),
+    lex("abc return int void if else goto do while for break continue switch case default", Ts),
     Ts = [identifier('abc'), return, int, void, if, else, goto,
-          do, while, for, break, continue].
+          do, while, for, break, continue, switch, case, default].
 
 test(constants) :-
     lex("123 456", Ts),
