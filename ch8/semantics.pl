@@ -12,7 +12,8 @@ Semantic analysis for Chapter 8 of "Writing a C Compiler".
 validate(program(FunDef), Program) :-
     validate_program(program(FunDef), Program1),
     label_program(Program1),
-    loop_program(Program1, Program).
+    loop_program(Program1, Program2),
+    gather_program(Program2, Program).
 
 
 %-------------------------%
@@ -60,7 +61,8 @@ validate_stmt(if(Cond, Then, Else), if(ValCond, ValThen, ValElse), S0, S) :-
     validate_exp(Cond, ValCond, S0, S1),
     validate_stmt(Then, ValThen, S1, S2),
     (   Else = none
-    ->  S = S2
+    ->  S = S2, 
+        ValElse = none
     ;   validate_stmt(Else, ValElse, S2, S)
     ).
 validate_stmt(compound(Block), compound(ValBlock), S0, S) :-
@@ -255,7 +257,7 @@ loop_stmt(expression(Exp), expression(Exp), _).
 loop_stmt(if(Cond, Then, Else), if(Cond, ValThen, ValElse), S) :-
     loop_stmt(Then, ValThen, S),
     (   Else = none
-    ->  true
+    ->  ValElse = none
     ;   loop_stmt(Else, ValElse, S)
     ).
 loop_stmt(compound(Block), compound(ValBlock), S) :-
@@ -300,6 +302,73 @@ loop_stmt(goto(Label), goto(Label), _).
 loop_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S) :-
     loop_stmt(Stmt, ValStmt, S).
 loop_stmt(null, null, _).
+
+
+%-------------------------%
+%   GATHER SWITCH CASES   %
+%-------------------------%
+
+gather_program(program(FunDef), program(ValFunDef)) :-
+    gather_function(FunDef, ValFunDef).
+
+gather_function(function(Name, Body), function(Name, ValBody)) :-
+    gather_block(Body, ValBody, [], []).
+
+gather_block(block(Items), block(ValItems), S0, S) :-
+    foldl(gather_item, Items, ValItems, S0, S).
+
+gather_item(d(Decl), d(Decl), S, S).
+gather_item(s(Stmt), s(ValStmt), S0, S) :-
+    gather_stmt(Stmt, ValStmt, S0, S).
+
+%!  gather_stmt(+Stmt, -ValStmt, +SIn, -SOut)
+%
+%   gathers the variables in a statement.
+
+gather_stmt(return(Exp), return(Exp), S, S).
+gather_stmt(expression(Exp), expression(Exp), S, S).
+gather_stmt(if(Cond, Then, Else), if(Cond, ValThen, ValElse), S0, S) :-
+    gather_stmt(Then, ValThen, S0, S1),
+    (   Else = none
+    ->  S = S1,
+        ValElse = none
+    ;   gather_stmt(Else, ValElse, S1, S)
+    ).
+gather_stmt(compound(Block), compound(ValBlock), S0, S) :-
+    gather_block(Block, ValBlock, S0, S).
+gather_stmt(break(Label), break(Label), S, S).
+gather_stmt(continue(Label), continue(Label), S, S).
+gather_stmt(while(Exp, Stmt, Label), while(Exp, ValStmt, Label), S0, S) :-
+    gather_stmt(Stmt, ValStmt, S0, S).
+gather_stmt(do_while(Stmt, Exp, Label), do_while(ValStmt, Exp, Label), S0, S) :-
+    gather_stmt(Stmt, ValStmt, S0, S).    
+gather_stmt(for(Init, Cond, Post, Stmt, Label), for(Init, Cond, Post, ValStmt, Label), S0, S) :-
+    gather_stmt(Stmt, ValStmt, S0, S).
+gather_stmt(switch(Exp, Stmt), switch(Exp, ValStmt), S0, S0) :-
+    gather_stmt(Stmt, ValStmt, [], S),
+    switch_check(S).
+gather_stmt(case(Exp, Stmt), case(Exp, ValStmt), S0, [case(Exp)|S]) :-
+    (   Exp = constant(_)
+    ->  true
+    ;   throw(non_constant_case)
+    ),
+    gather_stmt(Stmt, ValStmt, S0, S).
+gather_stmt(default(Stmt), default(ValStmt), S0, [default|S]) :-
+    gather_stmt(Stmt, ValStmt, S0, S).
+gather_stmt(goto(Label), goto(Label), S, S).
+gather_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
+    gather_stmt(Stmt, ValStmt, S0, S).
+gather_stmt(null, null, S, S).
+
+switch_check(S) :-
+    msort(S, S1),
+    clumped(S1, S2),
+    sort(2, @>=, S2, S3),
+    (   S3 = [X-Y|_],
+        Y > 1
+    ->  throw(duplicate_switch_clause(X))
+    ;   true
+    ).
 
 
 %-----------%
