@@ -36,6 +36,10 @@ validate_item(d(Decl), d(ValDecl), S0, S) :-
 validate_item(s(Stmt), s(ValStmt), S0, S) :-
     validate_stmt(Stmt, ValStmt, S0, S).
 
+%!  validate_decl(+Decl, -ValDecl, +SIn, -SOut)
+%
+%   Validates the variables in a declaration.
+
 validate_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
     (   table_get_local_entry(S0, Name, _)
     ->  throw(duplicated_var(Name))
@@ -43,6 +47,10 @@ validate_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
         table_add_entry(S0, Name, UniqueName, S1),
         validate_exp_opt(Exp, ValExp, S1, S)
     ).
+
+%!  validate_stmt(+Stmt, -ValStmt, +SIn, -SOut)
+%
+%   Validates the variables in a statement.
 
 validate_stmt(return(Exp), return(ValExp), S0, S) :-
     validate_exp(Exp, ValExp, S0, S).
@@ -71,6 +79,14 @@ validate_stmt(for(Init, Cond, Post, Stmt), for(ValInit, ValCond, ValPost, ValStm
     validate_exp_opt(Cond, ValCond, S2, S3),
     validate_exp_opt(Post, ValPost, S3, S4),
     validate_stmt(Stmt, ValStmt, S4, _S).
+validate_stmt(switch(Exp, Stmt), switch(ValExp, ValStmt), S0, S) :-
+    validate_exp(Exp, ValExp, S0, S1),
+    validate_stmt(Stmt, ValStmt, S1, S).
+validate_stmt(case(Exp, Stmt), case(ValExp, ValStmt), S0, S) :-
+    validate_exp(Exp, ValExp, S0, S1),
+    validate_stmt(Stmt, ValStmt, S1, S).
+validate_stmt(default(Stmt), default(ValStmt), S0, S) :-
+    validate_stmt(Stmt, ValStmt, S0, S).
 validate_stmt(goto(Label), goto(Label), S, S).
 validate_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
     validate_stmt(Stmt, ValStmt, S0, S).
@@ -80,6 +96,10 @@ validate_for_init(init_decl(Decl), init_decl(ValDecl), S0, S) :-
     validate_decl(Decl, ValDecl, S0, S).
 validate_for_init(init_exp(Exp), init_exp(ValExp), S0, S) :-
     validate_exp_opt(Exp, ValExp, S0, S).
+
+%!  validate_exp(+Exp, -ValExp, +SIn, -SOut)
+%
+%   Validates the variables in an expression.
 
 validate_exp(constant(Int), constant(Int), S, S).
 validate_exp(var(Name), var(UniqueName), S, S) :-
@@ -119,6 +139,10 @@ mk_varname(Name, UniqueName) :-
     atom_concat('var.', Id, Unique),
     atomic_list_concat(['var', Name, Id], '.', UniqueName).
 
+
+%------------------%
+%   SCOPED TABLE   %
+%------------------%
 
 empty_table([]).
 
@@ -183,6 +207,12 @@ label_stmt(do_while(Stmt, _Exp), S0, S) :-
     label_stmt(Stmt, S0, S).    
 label_stmt(for(_Init, _Cond, _Post, Stmt), S0, S) :-
     label_stmt(Stmt, S0, S).
+label_stmt(switch(_Exp, Stmt), S0, S) :-
+    label_stmt(Stmt, S0, S).
+label_stmt(case(_Exp, Stmt), S0, S) :-
+    label_stmt(Stmt, S0, S).
+label_stmt(default(Stmt), S0, S) :-
+    label_stmt(Stmt, S0, S).
 label_stmt(goto(Label), S0, S) :-
     S0 = state(Labels, Gotos),
     (   memberchk(Label, Gotos)
@@ -231,24 +261,41 @@ loop_stmt(if(Cond, Then, Else), if(Cond, ValThen, ValElse), S) :-
 loop_stmt(compound(Block), compound(ValBlock), S) :-
     loop_block(Block, ValBlock, S).
 loop_stmt(break, break(Label), S) :-
-    (   S = [Label|_]
+    (   S = [loop(Label)|_]
+    ->  true
+    ;   S = [switch(Label)|_]
     ->  true
     ;   throw(break_outside_loop)
     ).
 loop_stmt(continue, continue(Label), S) :-
-    (   S = [Label|_]
+    (   memberchk(loop(Label), S)
     ->  true
     ;   throw(continue_outside_loop)
     ).
 loop_stmt(while(Exp, Stmt), while(Exp, ValStmt, Label), S) :-
     gensym(loop, Label),
-    loop_stmt(Stmt, ValStmt, [Label|S]).
+    loop_stmt(Stmt, ValStmt, [loop(Label)|S]).
 loop_stmt(do_while(Stmt, Exp), do_while(ValStmt, Exp, Label), S) :-
     gensym(loop, Label),
-    loop_stmt(Stmt, ValStmt, [Label|S]).    
+    loop_stmt(Stmt, ValStmt, [loop(Label)|S]).    
 loop_stmt(for(Init, Cond, Post, Stmt), for(Init, Cond, Post, ValStmt, Label), S) :-
     gensym(loop, Label),
-    loop_stmt(Stmt, ValStmt, [Label|S]).
+    loop_stmt(Stmt, ValStmt, [loop(Label)|S]).
+loop_stmt(switch(Exp, Stmt), switch(Exp, ValStmt), S) :-
+    gensym(switch, Label),
+    loop_stmt(Stmt, ValStmt, [switch(Label)|S]).
+loop_stmt(case(Exp, Stmt), case(Exp, ValStmt), S) :-
+    (   memberchk(switch(_), S)
+    ->  true
+    ;   throw(case_without_switch)
+    ),
+    loop_stmt(Stmt, ValStmt, S).
+loop_stmt(default(Stmt), default(ValStmt), S) :-
+    (   memberchk(switch(_), S)
+    ->  true
+    ;   throw(default_without_switch)
+    ),
+    loop_stmt(Stmt, ValStmt, S).
 loop_stmt(goto(Label), goto(Label), _).
 loop_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S) :-
     loop_stmt(Stmt, ValStmt, S).
