@@ -283,20 +283,22 @@ loop_stmt(do_while(Stmt, Exp), do_while(ValStmt, Exp, Label), S) :-
 loop_stmt(for(Init, Cond, Post, Stmt), for(Init, Cond, Post, ValStmt, Label), S) :-
     gensym(loop, Label),
     loop_stmt(Stmt, ValStmt, [loop(Label)|S]).
-loop_stmt(switch(Exp, Stmt), switch(Exp, ValStmt), S) :-
+loop_stmt(switch(Exp, Stmt), switch(Exp, ValStmt, Label), S) :-
     gensym(switch, Label),
     loop_stmt(Stmt, ValStmt, [switch(Label)|S]).
-loop_stmt(case(Exp, Stmt), case(Exp, ValStmt), S) :-
+loop_stmt(case(Exp, Stmt), case(Exp, ValStmt, Label), S) :-
     (   memberchk(switch(_), S)
     ->  true
     ;   throw(case_without_switch)
     ),
+    gensym(case, Label),
     loop_stmt(Stmt, ValStmt, S).
-loop_stmt(default(Stmt), default(ValStmt), S) :-
+loop_stmt(default(Stmt), default(ValStmt, Label), S) :-
     (   memberchk(switch(_), S)
     ->  true
     ;   throw(default_without_switch)
     ),
+    gensym(default, Label),
     loop_stmt(Stmt, ValStmt, S).
 loop_stmt(goto(Label), goto(Label), _).
 loop_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S) :-
@@ -344,16 +346,17 @@ gather_stmt(do_while(Stmt, Exp, Label), do_while(ValStmt, Exp, Label), S0, S) :-
     gather_stmt(Stmt, ValStmt, S0, S).    
 gather_stmt(for(Init, Cond, Post, Stmt, Label), for(Init, Cond, Post, ValStmt, Label), S0, S) :-
     gather_stmt(Stmt, ValStmt, S0, S).
-gather_stmt(switch(Exp, Stmt), switch(Exp, ValStmt), S0, S0) :-
+gather_stmt(switch(Exp, Stmt, Label), switch(Exp, ValStmt, Label, RS), S0, S0) :-
     gather_stmt(Stmt, ValStmt, [], S),
-    switch_check(S).
-gather_stmt(case(Exp, Stmt), case(Exp, ValStmt), S0, [case(Exp)|S]) :-
+    switch_check(S),
+    reverse(S, RS).
+gather_stmt(case(Exp, Stmt, Label), case(Exp, ValStmt, Label), S0, [case(Exp, Label)|S]) :-
     (   Exp = constant(_)
     ->  true
     ;   throw(non_constant_case)
     ),
     gather_stmt(Stmt, ValStmt, S0, S).
-gather_stmt(default(Stmt), default(ValStmt), S0, [default|S]) :-
+gather_stmt(default(Stmt, Label), default(ValStmt, Label), S0, [default(Label)|S]) :-
     gather_stmt(Stmt, ValStmt, S0, S).
 gather_stmt(goto(Label), goto(Label), S, S).
 gather_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
@@ -361,14 +364,18 @@ gather_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
 gather_stmt(null, null, S, S).
 
 switch_check(S) :-
-    msort(S, S1),
-    clumped(S1, S2),
-    sort(2, @>=, S2, S3),
-    (   S3 = [X-Y|_],
+    maplist(without_label, S, S1),
+    sort(0, @=<, S1, S2),
+    clumped(S2, S3),
+    sort(2, @>=, S3, S4),
+    (   S4 = [X-Y|_],
         Y > 1
     ->  throw(duplicate_switch_clause(X))
     ;   true
     ).
+
+without_label(default(_), default).
+without_label(case(Exp, _), case(Exp)).
 
 
 %-----------%

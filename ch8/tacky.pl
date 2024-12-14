@@ -124,6 +124,18 @@ stmt_insts(for(Init, Cond, Post, Stmt, Label), Insts, T) :-
     atom_concat(Label, '.start', StartLabel),
     atom_concat(Label, '.break', BreakLabel),
     atom_concat(Label, '.continue', ContinueLabel).    
+stmt_insts(switch(Exp, Stmt, Label, Cases), Insts, T) :-
+    exp_insts(Exp, Result, Insts, I1),
+    cases_insts(Cases, BreakLabel, Result, I1, I2),
+    stmt_insts(Stmt, I2, I3),
+    I3 = [label(BreakLabel)|T],
+    atom_concat(Label, '.break', BreakLabel).
+stmt_insts(case(_Exp, Stmt, Label), Insts, T) :-
+    Insts = [label(Label)|I1],
+    stmt_insts(Stmt, I1, T).
+stmt_insts(default(Stmt, Label), Insts, T) :-
+    Insts = [label(Label)|I1],
+    stmt_insts(Stmt, I1, T).
 stmt_insts(goto(Label), Insts, T) :-
     Insts = [jump(Label)|T].
 stmt_insts(labelled(Label, Stmt), Insts, T) :-
@@ -147,6 +159,22 @@ for_cond_insts(Cond, BreakLabel, Is, T) :-
 for_post_insts(none, T, T) :- !.
 for_post_insts(Post, Is, T) :-
     exp_insts(Post, _, Is, T). 
+
+cases_insts([], Break, _, Insts, T) :-
+    Insts = [jump(Break)|T].
+cases_insts([Case|Rest], Break, Result, Insts, T) :-
+    case_insts(Case, Result, Insts, I1),
+    cases_insts(Rest, Break, Result, I1, T).
+
+case_insts(case(Exp, Label), Result, Insts, T) :-
+    mk_tmpvar(Dest),
+    Insts = [
+        binary(equal, Exp, Result, Dest),
+        jump_if_not_zero(Dest, Label)
+        | T
+    ].
+case_insts(default(Label), _Result, Insts, T) :-
+    Insts = [jump(Label)|T].
 
 exp_insts(constant(Int), constant(Int), T, T).
 exp_insts(var(Id), var(Id), T, T).
