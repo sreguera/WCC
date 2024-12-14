@@ -35,6 +35,10 @@ validate_item(d(Decl), d(ValDecl), S0, S) :-
 validate_item(s(Stmt), s(ValStmt), S0, S) :-
     validate_stmt(Stmt, ValStmt, S0, S).
 
+%!  validate_decl(+Decl, -ValDecl, +SIn, -SOut)
+%
+%   Validates the variables in a declaration.
+
 validate_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
     (   table_get_local_entry(S0, Name, _)
     ->  throw(duplicated_var(Name))
@@ -46,6 +50,10 @@ validate_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
         )
     ).
 
+%!  validate_stmt(+Stmt, -ValStmt, +SIn, -SOut)
+%
+%   Validates the variables in a statement.
+
 validate_stmt(return(Exp), return(ValExp), S0, S) :-
     validate_exp(Exp, ValExp, S0, S).
 validate_stmt(expression(Exp), expression(ValExp), S0, S) :-
@@ -54,7 +62,8 @@ validate_stmt(if(Cond, Then, Else), if(ValCond, ValThen, ValElse), S0, S) :-
     validate_exp(Cond, ValCond, S0, S1),
     validate_stmt(Then, ValThen, S1, S2),
     (   Else = none
-    ->  S = S2
+    ->  S = S2, 
+        ValElse = none
     ;   validate_stmt(Else, ValElse, S2, S)
     ).
 validate_stmt(compound(Block), compound(ValBlock), S0, S) :-
@@ -63,6 +72,10 @@ validate_stmt(goto(Label), goto(Label), S, S).
 validate_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
     validate_stmt(Stmt, ValStmt, S0, S).
 validate_stmt(null, null, S, S).
+
+%!  validate_exp(+Exp, -ValExp, +SIn, -SOut)
+%
+%   Validates the variables in an expression.
 
 validate_exp(constant(Int), constant(Int), S, S).
 validate_exp(var(Name), var(UniqueName), S, S) :-
@@ -96,6 +109,10 @@ mk_varname(Name, UniqueName) :-
     atom_concat('var.', Id, Unique),
     atomic_list_concat(['var', Name, Id], '.', UniqueName).
 
+
+%------------------%
+%   SCOPED TABLE   %
+%------------------%
 
 empty_table([]).
 

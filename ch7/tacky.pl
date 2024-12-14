@@ -83,7 +83,6 @@ stmt_insts(goto(Label), Insts, T) :-
 stmt_insts(labelled(Label, Stmt), Insts, T) :-
     Insts = [label(Label)|I1],
     stmt_insts(Stmt, I1, T).
-
 stmt_insts(null, T, T).
 
 exp_insts(constant(Int), constant(Int), T, T).

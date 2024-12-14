@@ -22,6 +22,10 @@ validate_item(d(Decl), d(ValDecl), S0, S) :-
 validate_item(s(Stmt), s(ValStmt), S0, S) :-
     validate_stmt(Stmt, ValStmt, S0, S).
 
+%!  validate_decl(+Decl, -ValDecl, +SIn, -SOut)
+%
+%   Validates the variables in a declaration.
+
 validate_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
     (   get_assoc(Name, S0, _)
     ->  throw(duplicated_var(Name))
@@ -33,11 +37,19 @@ validate_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
         )
     ).
 
+%!  validate_stmt(+Stmt, -ValStmt, +SIn, -SOut)
+%
+%   Validates the variables in a statement.
+
 validate_stmt(return(Exp), return(ValExp), S0, S) :-
     validate_exp(Exp, ValExp, S0, S).
 validate_stmt(expression(Exp), expression(ValExp), S0, S) :-
     validate_exp(Exp, ValExp, S0, S).
 validate_stmt(null, null, S, S).
+
+%!  validate_exp(+Exp, -ValExp, +SIn, -SOut)
+%
+%   Validates the variables in an expression.
 
 validate_exp(constant(Int), constant(Int), S, S).
 validate_exp(var(Name), var(UniqueName), S, S) :-
