@@ -35,62 +35,62 @@ tack(program(FunDef), program(FunDefTacky)) :-
 tack(function(Name, Body), function(Name, Instructions)) :-
     body_insts(Body, Instructions, []).
 
-body_insts([Item|Items], Insts, T) :-
-    item_insts(Item, Insts, I1),
-    body_insts(Items, I1, T).
-body_insts([], [return(constant(0))|T], T).
+body_insts([Item|Items], I0, Is) :-
+    item_insts(Item, I0, I1),
+    body_insts(Items, I1, Is).
+body_insts([], [return(constant(0))|Is], Is).
 
-item_insts(d(Decl), Insts, T) :-
-    decl_insts(Decl, Insts, T).
-item_insts(s(Stmt), Insts, T) :-
-    stmt_insts(Stmt, Insts, T).
+item_insts(d(Decl), I0, Is) :-
+    decl_insts(Decl, I0, Is).
+item_insts(s(Stmt), I0, Is) :-
+    stmt_insts(Stmt, I0, Is).
 
-decl_insts(declaration(Var, Exp), Insts, T) :-
+decl_insts(declaration(Var, Exp), I0, Is) :-
     (   Exp = none
-    ->  Insts = T
-    ;   exp_insts(Exp, Result, Insts, I1),
-        I1 = [copy(Result, var(Var))|T]
+    ->  I0 = Is
+    ;   exp_insts(Exp, Result, I0, I1),
+        I1 = [copy(Result, var(Var))|Is]
     ).
 
-stmt_insts(return(Exp), Insts, T) :-
-    exp_insts(Exp, Result, Insts, I1),
-    I1 = [return(Result)|T].
-stmt_insts(expression(Exp), Insts, T) :-
-    exp_insts(Exp, _Result, Insts, T).
-stmt_insts(if(Cond, Then, none), Insts, T) :-
-    exp_insts(Cond, Result, Insts, I1),
+stmt_insts(return(Exp), I0, Is) :-
+    exp_insts(Exp, Result, I0, I1),
+    I1 = [return(Result)|Is].
+stmt_insts(expression(Exp), I0, Is) :-
+    exp_insts(Exp, _Result, I0, Is).
+stmt_insts(if(Cond, Then, none), I0, Is) :-
+    exp_insts(Cond, Result, I0, I1),
     I1 = [jump_if_zero(Result, EndLabel)|I2],
     stmt_insts(Then, I2, I3),
-    I3 = [label(EndLabel)|T],
+    I3 = [label(EndLabel)|Is],
     gensym('if_end', EndLabel).
-stmt_insts(if(Cond, Then, Else), Insts, T) :-
+stmt_insts(if(Cond, Then, Else), I0, Is) :-
     Else \= none,
-    exp_insts(Cond, Result, Insts, I1),
+    exp_insts(Cond, Result, I0, I1),
     I1 = [jump_if_zero(Result, ElseLabel)|I2],
     stmt_insts(Then, I2, I3),
     I3 = [jump(EndLabel), label(ElseLabel)|I4],
     stmt_insts(Else, I4, I5),
-    I5 = [label(EndLabel)|T],
+    I5 = [label(EndLabel)|Is],
     gensym('if_else', ElseLabel),
     gensym('if_end', EndLabel).
-stmt_insts(goto(Label), Insts, T) :-
-    Insts = [jump(Label)|T].
-stmt_insts(labelled(Label, Stmt), Insts, T) :-
-    Insts = [label(Label)|I1],
-    stmt_insts(Stmt, I1, T).
-stmt_insts(null, T, T).
+stmt_insts(goto(Label), I0, Is) :-
+    I0 = [jump(Label)|Is].
+stmt_insts(labelled(Label, Stmt), I0, Is) :-
+    I0 = [label(Label)|I1],
+    stmt_insts(Stmt, I1, Is).
+stmt_insts(null, Is, Is).
 
-exp_insts(constant(Int), constant(Int), T, T).
-exp_insts(var(Id), var(Id), T, T).
-exp_insts(unary(Op, Inner), Dest, Is, T) :-
-    unary_insts(Op, Inner, Dest, Is, T).
-exp_insts(binary(Op, Left, Right), Dest, Is, T) :-
-    binary_insts(Op, Left, Right, Dest, Is, T).
-exp_insts(assignment(Var, Exp), Var, Is, T) :-
-    exp_insts(Exp, Dest, Is, I1),
-    I1 = [copy(Dest, Var)|T].
-exp_insts(conditional(Cond, Then, Else), Dest, Is, T) :-
-    exp_insts(Cond, Result, Is, I1),
+exp_insts(constant(Int), constant(Int), Is, Is).
+exp_insts(var(Id), var(Id), Is, Is).
+exp_insts(unary(Op, Inner), Dest, I0, Is) :-
+    unary_insts(Op, Inner, Dest, I0, Is).
+exp_insts(binary(Op, Left, Right), Dest, I0, Is) :-
+    binary_insts(Op, Left, Right, Dest, I0, Is).
+exp_insts(assignment(Var, Exp), Var, I0, Is) :-
+    exp_insts(Exp, Dest, I0, I1),
+    I1 = [copy(Dest, Var)|Is].
+exp_insts(conditional(Cond, Then, Else), Dest, I0, Is) :-
+    exp_insts(Cond, Result, I0, I1),
     I1 = [jump_if_zero(Result, ElseLabel)|I2],
     exp_insts(Then, DestThen, I2, I3),
     I3 = [
@@ -103,33 +103,33 @@ exp_insts(conditional(Cond, Then, Else), Dest, Is, T) :-
     I5 = [
         copy(DestElse, Dest),
         label(EndLabel)
-        | T
+        | Is
     ],
     mk_tmpvar(Dest),
     gensym('if_else', ElseLabel),
     gensym('if_end', EndLabel).
 
-unary_insts(pre_incr, Inner, Dest0, Is, T) :- !,
-    exp_insts(Inner, Dest0, Is, I1),
-    I1 = [binary(add, Dest0, constant(1), Dest0)|T].
-unary_insts(pre_decr, Inner, Dest0, Is, T) :- !,
-    exp_insts(Inner, Dest0, Is, I1),
-    I1 = [binary(subtract, Dest0, constant(1), Dest0)|T].
-unary_insts(post_incr, Inner, Dest, Is, T) :- !,
-    exp_insts(Inner, Dest0, Is, I1),
+unary_insts(pre_incr, Inner, Dest0, I0, Is) :- !,
+    exp_insts(Inner, Dest0, I0, I1),
+    I1 = [binary(add, Dest0, constant(1), Dest0)|Is].
+unary_insts(pre_decr, Inner, Dest0, I0, Is) :- !,
+    exp_insts(Inner, Dest0, I0, I1),
+    I1 = [binary(subtract, Dest0, constant(1), Dest0)|Is].
+unary_insts(post_incr, Inner, Dest, I0, Is) :- !,
+    exp_insts(Inner, Dest0, I0, I1),
     mk_tmpvar(Dest),
-    I1 = [copy(Dest0, Dest), binary(add, Dest0, constant(1), Dest0)|T].
-unary_insts(post_decr, Inner, Dest, Is, T) :- !,
-    exp_insts(Inner, Dest0, Is, I1),
+    I1 = [copy(Dest0, Dest), binary(add, Dest0, constant(1), Dest0)|Is].
+unary_insts(post_decr, Inner, Dest, I0, Is) :- !,
+    exp_insts(Inner, Dest0, I0, I1),
     mk_tmpvar(Dest),
-    I1 = [copy(Dest0, Dest), binary(subtract, Dest0, constant(1), Dest0)|T].
-unary_insts(Op, Inner, Dest, Is, T) :-
-    exp_insts(Inner, Dest0, Is, I1),
+    I1 = [copy(Dest0, Dest), binary(subtract, Dest0, constant(1), Dest0)|Is].
+unary_insts(Op, Inner, Dest, I0, Is) :-
+    exp_insts(Inner, Dest0, I0, I1),
     mk_tmpvar(Dest),
-    I1 = [unary(Op, Dest0, Dest)|T].
+    I1 = [unary(Op, Dest0, Dest)|Is].
 
-binary_insts(and, Left, Right, Dest, Is, T) :- !, %TODO replace ! with index on op
-    exp_insts(Left, DestL, Is, I1),
+binary_insts(and, Left, Right, Dest, I0, Is) :- !, %TODO replace ! with index on op
+    exp_insts(Left, DestL, I0, I1),
     I1 = [jump_if_zero(DestL, FalseLabel)|I2],
     exp_insts(Right, DestR, I2, I3),
     I3 = [
@@ -139,13 +139,13 @@ binary_insts(and, Left, Right, Dest, Is, T) :- !, %TODO replace ! with index on 
         label(FalseLabel),
         copy(constant(0), Dest),
         label(EndLabel)
-        | T
+        | Is
     ],
     mk_tmpvar(Dest),
     gensym('and_end', EndLabel),
     gensym('and_false', FalseLabel).
-binary_insts(or, Left, Right, Dest, Is, T) :- !,
-    exp_insts(Left, DestL, Is, I1),
+binary_insts(or, Left, Right, Dest, I0, Is) :- !,
+    exp_insts(Left, DestL, I0, I1),
     I1 = [jump_if_not_zero(DestL, TrueLabel)|I2],
     exp_insts(Right, DestR, I2, I3),
     I3 = [
@@ -155,18 +155,18 @@ binary_insts(or, Left, Right, Dest, Is, T) :- !,
         label(TrueLabel),
         copy(constant(1), Dest),
         label(EndLabel)
-        | T
+        | Is
     ],
     mk_tmpvar(Dest),
     gensym('or_end', EndLabel),
     gensym('or_true', TrueLabel).
-binary_insts(Op, Left, Right, Dest, Is, T) :-
+binary_insts(Op, Left, Right, Dest, I0, Is) :-
     Op \= and,
     Op \= or,
-    exp_insts(Left, DestL, Is, I1),
+    exp_insts(Left, DestL, I0, I1),
     exp_insts(Right, DestR, I1, I2),
     mk_tmpvar(Dest),
-    I2 = [binary(Op, DestL, DestR, Dest)|T].
+    I2 = [binary(Op, DestL, DestR, Dest)|Is].
 
 mk_tmpvar(var(UniqueName)) :-
     gensym('tmp.', UniqueName).
