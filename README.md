@@ -30,7 +30,8 @@ Each directory contains the code for the corresponding chapter.
 * ch6 - if Statements and Conditional Expressions
 * ch7 - Compound Statements
 * ch8 - Loops
-* ch9..ch20 - TODO
+* ch9 - Functions
+* ch10..ch20 - TODO
 
 ## Prolog and Compilers
 
