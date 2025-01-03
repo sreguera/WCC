@@ -1,6 +1,7 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
 :- module(semantics, [validate/2]).
+:- use_module(parser, [is_ast/1]).
 
 
 /** <module> Parser
@@ -9,8 +10,9 @@ Semantic analysis for Chapter 6 of "Writing a C Compiler".
 
 */
 
-validate(program(FunDef), Program) :-
-    validate_program(program(FunDef), Program),
+validate(Program0, Program) :-
+    assertion(is_ast(Program0)),
+    validate_program(Program0, Program),
     label_program(Program).
 
 

@@ -53,9 +53,9 @@ op_asm(negate, neg).
 op_asm(add, add).
 op_asm(subtract, sub).
 op_asm(multiply, mult).
-op_asm(and, and).
-op_asm(or, or).
-op_asm(xor, xor).
+op_asm(bit_and, and).
+op_asm(bit_or, or).
+op_asm(bit_xor, xor).
 op_asm(lshift, sal).
 op_asm(rshift, sar).
 

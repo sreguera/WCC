@@ -1,6 +1,9 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
-:- module(parser, [parse/2]).
+:- module(parser,
+    [ is_ast/1,     % Succeeds if Ast is a valid AST.
+      parse/2       % Parses a list of tokens into the AST of a program.
+    ]).
 :- use_module(library(dcg/high_order)).
 
 /** <module> Parser
@@ -8,32 +11,83 @@
 Parser for Chapter 7 of "Writing a C Compiler".
 
 The parser parses a list of tokens into the AST of a program.
-    * Program = program(FunctionDefinition)
-    * FunctionDefinition = function(Name:atom, Body:block)
-    * Block = block([block_item])
-    * BlockItem = s(Statement) | d(Declaration)
-    * Declaration = declaration(Name, Exp?)
-    * Statement =
-        | return(Exp)
-        | expression(Exp)
-        | if(Condition:exp, Then:stmt, Else:stmt?)
-        | compound(block)
-        | labelled(Name, Stmt)
-        | goto(Name)
-        | null
-    * Exp = 
-        | constant(Value:int)
-        | var(Identifier)
-        | unary(Unop, Exp)
-        | binary(Binop, Exp, Exp)
-        | assignment(Exp, Exp)
-        | conditional(Exp, Exp, Exp)
-    * Unop = complement | negate | not
-    * Binop = add | subtract | multiply | divide | remainder
-        | bit_and | bit_or | bit_xor | lshift | rshift
-        | and | or | equal | not_equal
-        | less_than | less_eq | greater_than | greater_eq
+
 */
+
+%!  is_ast(+Ast)
+%
+%   Succeeds if Ast is a valid AST.
+
+is_ast(Ast) :-
+    is_program_ast(Ast).
+
+is_program_ast(program(FunctionDefinition)) :-
+    is_fundef_ast(FunctionDefinition).
+
+is_fundef_ast(function(Name, Body)) :-
+    atom(Name),
+    is_block_ast(Body).
+
+is_block_ast(block(Items)) :-
+    forall(member(Item, Items), is_block_item_ast(Item)).
+
+is_block_item_ast(s(Statement)) :-
+    is_statement_ast(Statement).
+is_block_item_ast(d(Declaration)) :-
+    is_declaration_ast(Declaration).
+
+is_declaration_ast(declaration(Name, Item)) :-
+    atom(Name),
+    (   Item = none
+    ->  true
+    ;   is_exp_ast(Item)
+    ).
+
+is_statement_ast(return(Exp)) :-
+    is_exp_ast(Exp).
+is_statement_ast(expression(Exp)) :-
+    is_exp_ast(Exp).
+is_statement_ast(if(Condition, Then, Else)) :-
+    is_exp_ast(Condition),
+    is_statement_ast(Then),
+    (   Else = none
+    ->  true
+    ;   is_statement_ast(Else)
+    ).
+is_statement_ast(labelled(Label, Stmt)) :-
+    atom(Label),
+    is_statement_ast(Stmt).
+is_statement_ast(goto(Label)) :-
+    atom(Label).
+is_statement_ast(compound(Block)) :-
+    is_block_ast(Block).
+is_statement_ast(null).
+
+is_exp_ast(constant(Value)) :-
+    integer(Value).
+is_exp_ast(var(Id)) :-
+    atom(Id).
+is_exp_ast(assignment(Left, Right)) :-
+    is_exp_ast(Left),
+    is_exp_ast(Right).
+is_exp_ast(unary(Op, Exp)) :-
+    (   unary_op(_, Op)
+    ->  true
+    ;   postfix_op(_, Op)
+    ),
+    is_exp_ast(Exp).
+is_exp_ast(binary(Op, Left, Right)) :-
+    bin_op(_, Op, _, _),
+    is_exp_ast(Left),
+    is_exp_ast(Right).
+is_exp_ast(conditional(Condition, Left, Right)) :-
+    is_exp_ast(Condition),
+    is_exp_ast(Left),
+    is_exp_ast(Right).
+
+%!  program(Program)//
+%
+%   Parses a C program and Program is the corresponding AST.
 
 program(program(FunctionDefinition)) -->
     function_definition(FunctionDefinition).
@@ -259,40 +313,46 @@ parse(Tokens, Program) :-
 test(parse) :-
     lex("int main(void) { return 2; }", Tokens),
     parse(Tokens, Program),
-    Program = program(function(main, block([s(return(constant(2)))]))).
+    assertion(is_ast(Program)),
+    assertion(Program = program(function(main, block([s(return(constant(2)))])))).
 
 test(parse2) :-
     lex("int main(void) { return ~(-2); }", Tokens),
     parse(Tokens, Program),
-    Program = program(function(main, block([s(return(unary(complement, unary(negate, constant(2)))))]))).
+    assertion(is_ast(Program)),
+    assertion(Program = program(function(main, block([s(return(unary(complement, unary(negate, constant(2)))))])))).
 
 test(parse3) :-
     lex("int main(void) { return 1 + 2; }", Tokens),
     parse(Tokens, Program),
-    Program = program(function(main, block([s(return(binary(add,constant(1),constant(2))))]))).
+    assertion(is_ast(Program)),
+    assertion(Program = program(function(main, block([s(return(binary(add,constant(1),constant(2))))])))).
 
 test(parse5) :-
     lex("int main(void) { int a = 5; int b; b = a - 3; return b; }", Tokens),
     parse(Tokens, Program),
-    Program = program(function(main, block([
+    assertion(is_ast(Program)),
+    assertion(Program = program(function(main, block([
         d(declaration(a, constant(5))),
         d(declaration(b, none)),
         s(expression(assignment(var(b), binary(subtract, var(a), constant(3))))),
         s(return(var(b)))
-    ]))).
+    ])))).
 
 test(parse_if) :-
     lex("int main(void) { if (1) if (2) return 1; else return 2; }", Tokens),
     parse(Tokens, Program),
-    Program = program(function(main, block([
+    assertion(is_ast(Program)),
+    assertion(Program = program(function(main, block([
         s(if(constant(1),
             if(constant(2), return(constant(1)), return(constant(2))),
             none))
-    ]))).
+    ])))).
 
 test(exp) :-
     lex("2 + 3 * 4", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = binary(add,
             constant(2), 
             binary(multiply, constant(3), constant(4))).
@@ -300,6 +360,7 @@ test(exp) :-
 test(exp) :-
     lex("2 + 3 - 4", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = binary(subtract,
             binary(add, constant(2), constant(3)),
             constant(4)).
@@ -307,36 +368,43 @@ test(exp) :-
 test(exp) :-
     lex("~2 + 3", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = binary(add, unary(complement, constant(2)), constant(3)).
 
 test(exp) :-
     lex("2 & 3", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = binary(bit_and, constant(2), constant(3)).
 
 test(exp) :-
     lex("a = b = 5", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = assignment(var(a), assignment(var(b), constant(5))).
 
 test(exp) :-
     lex("--a + -b++", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = binary(add, unary(pre_decr, var(a)), unary(negate, unary(post_incr, var(b)))).
 
 test(decl) :-
     lex("int b = 3 + a++;", Tokens),
     once(phrase(declaration(Decl), Tokens)),
-    Decl = declaration(b,binary(add,constant(3),unary(post_incr,var(a)))).
+    assertion(is_declaration_ast(Decl)),
+    Decl = declaration(b, binary(add, constant(3), unary(post_incr, var(a)))).
 
 test(cond) :-
     lex("a ? b ? 1 : 2 : 3", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = conditional(var(a), conditional(var(b), constant(1), constant(2)), constant(3)).
 
 test(cond_prec) :-
     lex("a || 0 ? 20 : 0", Tokens),
     once(phrase(exp(Exp), Tokens)),
+    assertion(is_exp_ast(Exp)),
     Exp = conditional(binary(or, var(a), constant(0)), constant(20), constant(0)).
 
 :- end_tests(parser).

@@ -1,6 +1,8 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
 :- module(tacky, [tack/2]).
+:- use_module(parser, [is_ast/1]).
+
 
 /** <module> Tacky
  
@@ -18,14 +20,18 @@ The generator convertes the AST to Tacky IL.
         | var(Name:atom)
     * Unop = complement | negate
     * Binop = add | subtract | multiply | divide | remainder
-        | and | or | xor | lshift | rshift
+        | bit_and | bit_or | bit_xor | lshift | rshift
 */
 
-tack(program(FunDef), program(FunDefTacky)) :-
-    reset_gensym,
-    tack(FunDef, FunDefTacky).
+tack(Program0, Program) :-
+    assertion(is_ast(Program0)),
+    tack_program(Program0, Program).
 
-tack(function(Name, Body), function(Name, Instructions)) :-
+tack_program(program(FunDef), program(FunDefTacky)) :-
+    reset_gensym,
+    tack_function(FunDef, FunDefTacky).
+
+tack_function(function(Name, Body), function(Name, Instructions)) :-
     stmt_insts(Body, Instructions).
 
 stmt_insts(return(Exp), I0) :-
