@@ -1,6 +1,9 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
-:- module(semantics, [validate/2]).
+:- module(semantics,
+    [ is_valid_ast/1,   % Succeeds if Ast is a validated AST.
+      validate/2        % Transforms the input program into a validated one.
+    ]).
 :- use_module(parser, [is_ast/1]).
 
 
@@ -9,6 +12,150 @@
 Semantic analysis for Chapter 8 of "Writing a C Compiler".
 
 */
+
+%!  is_valid_ast(+Ast)
+%
+%   Succeeds if Ast is a validated AST.
+
+is_valid_ast(Ast) :-
+    is_valid_program_ast(Ast).
+
+is_valid_program_ast(program(FunctionDefinition)) :-
+    is_valid_fundef_ast(FunctionDefinition).
+
+is_valid_fundef_ast(function(Name, Body)) :-
+    atom(Name),
+    is_valid_block_ast(Body).
+
+is_valid_block_ast(block(Items)) :-
+    forall(member(Item, Items), is_valid_block_item_ast(Item)).
+
+is_valid_block_item_ast(s(Statement)) :-
+    is_valid_statement_ast(Statement).
+is_valid_block_item_ast(d(Declaration)) :-
+    is_valid_declaration_ast(Declaration).
+
+is_valid_declaration_ast(declaration(Name, Item)) :-
+    atom(Name),
+    is_valid_opt_exp_ast(Item).
+
+is_valid_statement_ast(return(Exp)) :-
+    is_valid_exp_ast(Exp).
+is_valid_statement_ast(expression(Exp)) :-
+    is_valid_exp_ast(Exp).
+is_valid_statement_ast(if(Condition, Then, Else)) :-
+    is_valid_exp_ast(Condition),
+    is_valid_statement_ast(Then),
+    (   Else = none
+    ->  true
+    ;   is_valid_statement_ast(Else)
+    ).
+is_valid_statement_ast(compound(Block)) :-
+    is_valid_block_ast(Block).
+is_valid_statement_ast(break(Label)) :-
+    atom(Label).
+is_valid_statement_ast(continue(Label)) :-
+    atom(Label).
+is_valid_statement_ast(while(Exp, Stmt, Label)) :-
+    is_valid_exp_ast(Exp),
+    is_valid_statement_ast(Stmt),
+    atom(Label).
+is_valid_statement_ast(do_while(Stmt, Exp, Label)) :-
+    is_valid_statement_ast(Stmt),
+    is_valid_exp_ast(Exp),
+    atom(Label).
+is_valid_statement_ast(for(Init, Cond, Post, Stmt, Label)) :-
+    is_valid_for_init_ast(Init),
+    is_valid_opt_exp_ast(Cond),
+    is_valid_opt_exp_ast(Post),
+    is_valid_statement_ast(Stmt),
+    atom(Label).
+is_valid_statement_ast(switch(Exp, Stmt, Label, Cases)) :-
+    is_valid_exp_ast(Exp),
+    is_valid_statement_ast(Stmt),
+    atom(Label),
+    forall(member(Case, Cases), is_valid_case_ast(Case)).
+is_valid_statement_ast(case(Exp, Stmt, Label)) :-
+    is_valid_exp_ast(Exp),
+    is_valid_statement_ast(Stmt),
+    atom(Label).
+is_valid_statement_ast(default(Stmt, Label)) :-
+    is_valid_statement_ast(Stmt),
+    atom(Label).
+is_valid_statement_ast(goto(Label)) :-
+    atom(Label).
+is_valid_statement_ast(labelled(Label, Stmt)) :-
+    atom(Label),
+    is_valid_statement_ast(Stmt).
+is_valid_statement_ast(null).
+
+is_valid_for_init_ast(init_decl(Decl)) :-
+    is_valid_declaration_ast(Decl).
+is_valid_for_init_ast(init_exp(Exp)) :-
+    is_valid_opt_exp_ast(Exp).
+
+is_valid_case_ast(case(Exp, Label)) :-
+    is_valid_exp_ast(Exp),
+    atom(Label).
+is_valid_case_ast(default(Label)) :-
+    atom(Label).
+
+is_valid_exp_ast(constant(Value)) :-
+    integer(Value).
+is_valid_exp_ast(var(Id)) :-
+    atom(Id).
+is_valid_exp_ast(assignment(Left, Right)) :-
+    is_valid_exp_ast(Left),
+    is_valid_exp_ast(Right).
+is_valid_exp_ast(unary(Op, Exp)) :-
+    is_valid_unary_op(Op),
+    is_valid_exp_ast(Exp).
+is_valid_exp_ast(binary(Op, Left, Right)) :-
+    is_valid_bin_op(Op),
+    is_valid_exp_ast(Left),
+    is_valid_exp_ast(Right).
+is_valid_exp_ast(conditional(Condition, Left, Right)) :-
+    is_valid_exp_ast(Condition),
+    is_valid_exp_ast(Left),
+    is_valid_exp_ast(Right).
+
+is_valid_opt_exp_ast(Exp) :-
+    (   Exp = none
+    ->  true
+    ;   is_valid_exp_ast(Exp)
+    ).
+
+is_valid_unary_op(negate).
+is_valid_unary_op(complement).
+is_valid_unary_op(not).
+is_valid_unary_op(pre_incr).
+is_valid_unary_op(pre_decr).
+is_valid_unary_op(post_incr).
+is_valid_unary_op(post_decr).
+
+is_valid_bin_op(multiply).
+is_valid_bin_op(divide).
+is_valid_bin_op(remainder).
+is_valid_bin_op(add).
+is_valid_bin_op(subtract).
+is_valid_bin_op(lshift).
+is_valid_bin_op(rshift).
+is_valid_bin_op(less_than).
+is_valid_bin_op(less_eq).
+is_valid_bin_op(greater_than).
+is_valid_bin_op(greater_eq).
+is_valid_bin_op(equal).
+is_valid_bin_op(not_equal).
+is_valid_bin_op(bit_and).
+is_valid_bin_op(bit_xor).
+is_valid_bin_op(bit_or).
+is_valid_bin_op(and).
+is_valid_bin_op(or).
+is_valid_bin_op(cond).
+
+%!  validate(+Program, -ValidatedProgram)
+%
+%   Transforms the input program into a validated one.
 
 validate(Program0, Program) :-
     assertion(is_ast(Program0)),
@@ -394,11 +541,12 @@ test(validate) :-
         s(return(var(b)))
     ]))),
     validate(ProgramIn, ProgramOut),
-    ProgramOut = program(function(main, block([
+    assertion(is_valid_ast(ProgramOut)),
+    assertion(ProgramOut = program(function(main, block([
         d(declaration('var.a.1', constant(5))),
         d(declaration('var.b.2', none)),
         s(expression(assignment(var('var.b.2'), binary(subtract, var('var.a.1'), constant(3))))),
         s(return(var('var.b.2')))
-    ]))).
+    ])))).
 
 :- end_tests(semantics).

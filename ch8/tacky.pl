@@ -1,6 +1,7 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
 :- module(tacky, [tack/2]).
+:- use_module(semantics, [is_valid_ast/1]).
 
 /** <module> Tacky
  
@@ -29,6 +30,7 @@ The generator convertes the AST to Tacky IL.
 */
 
 tack(program(FunDef), program(FunDefTacky)) :-
+    assertion(is_valid_ast(program(FunDef))),
     reset_gensym,
     tack(FunDef, FunDefTacky).
 

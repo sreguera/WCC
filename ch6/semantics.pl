@@ -1,6 +1,9 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
-:- module(semantics, [validate/2]).
+:- module(semantics,
+    [ is_valid_ast/1,   % Succeeds if Ast is a validated AST.
+      validate/2        % Transforms the input program into a validated one.
+    ]).
 :- use_module(parser, [is_ast/1]).
 
 
@@ -9,6 +12,17 @@
 Semantic analysis for Chapter 6 of "Writing a C Compiler".
 
 */
+
+%!  is_valid_ast(+Ast)
+%
+%   Succeeds if Ast is a validated AST.
+
+is_valid_ast(Ast) :-
+    is_ast(Ast).
+
+%!  validate(+Program, -ValidatedProgram)
+%
+%   Transforms the input program into a validated one.
 
 validate(Program0, Program) :-
     assertion(is_ast(Program0)),
@@ -163,11 +177,12 @@ test(validate) :-
         s(return(var(b)))
     ])),
     validate(ProgramIn, ProgramOut),
-    ProgramOut = program(function(main, [
+    assertion(is_valid_ast(ProgramOut)),
+    assertion(ProgramOut = program(function(main, [
         d(declaration('var.a.1', constant(5))),
         d(declaration('var.b.2', none)),
         s(expression(assignment(var('var.b.2'), binary(subtract, var('var.a.1'), constant(3))))),
         s(return(var('var.b.2')))
-    ])).
+    ]))).
 
 :- end_tests(semantics).
