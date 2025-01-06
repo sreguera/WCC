@@ -1,6 +1,7 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
 :- module(codegen, [generate/2]).
+:- use_module(tacky, [is_tacky/1]).
 
 /** <module> Codegen
  
@@ -9,6 +10,7 @@ Assembler generator for Chapter 3 of "Writing a C Compiler".
 */
 
 generate(program(FunDef), program(FunDefAsm)) :-
+    assertion(is_tacky(program(FunDef))),
     generate(FunDef, FunDefAsm).
 
 generate(function(Name, Insts), function(Name, AsmInsts)) :-

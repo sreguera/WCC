@@ -1,6 +1,9 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
-:- module(tacky, [tack/2]).
+:- module(tacky,
+    [ is_tacky/1,   % Succeeds if Tacky is a valid tacky program.
+      tack/2        % Translates an Ast to Tacky.
+    ]).
 :- use_module(semantics, [is_valid_ast/1]).
 
 /** <module> Tacky
@@ -8,33 +11,87 @@
 Tacky generator for Chapter 8 of "Writing a C Compiler".
 
 The generator convertes the AST to Tacky IL.
-    * Program = program(FunctionDefinition)
-    * FunctionDefinition = function(Name:atom, Body:[instruction])
-    * Instruction = 
-        | return(val)
-        | unary(Unop, src:val, dst:val)
-        | binary(Binop, left:val, right:val, dst:val)
-        | copy(src:val, dst:val)
-        | jump(identifier)
-        | jump_if_zero(condition, identifier)
-        | jump_if_not_zero(condition, identifier)
-        | label(identifier)
-    * Val = 
-        | constant(Value:int)
-        | var(Name:atom)
-    * Unop = complement | negate | not
-    * Binop = add | subtract | multiply | divide | remainder
-        | bit_and | bit_or | bit_xor | lshift | rshift
-        | equal | not_equal
-        | less_than | less_eq | greater_than | greater_eq
+
 */
 
-tack(program(FunDef), program(FunDefTacky)) :-
-    assertion(is_valid_ast(program(FunDef))),
-    reset_gensym,
-    tack(FunDef, FunDefTacky).
+%!  is_tacky(+Tacky)
+%
+%   Succeeds if Tacky is a valid tacky program.
 
-tack(function(Name, Body), function(Name, Instructions)) :-
+is_tacky(Program) :-
+    is_tacky_program(Program).
+
+is_tacky_program(program(FunDef)) :-
+    is_tacky_function(FunDef).
+
+is_tacky_function(function(Name, Body)) :-
+    atom(Name),
+    forall(member(Inst, Body), is_tacky_instruction(Inst)).
+
+is_tacky_instruction(return(Val)) :-
+    is_tacky_value(Val).
+is_tacky_instruction(unary(Op, Src, Dst)) :-
+    is_tacky_uni_op(Op),
+    is_tacky_value(Src),
+    is_tacky_value(Dst).
+is_tacky_instruction(binary(Op, Arg1, Arg2, Dst)) :-
+    is_tacky_bin_op(Op),
+    is_tacky_value(Arg1),
+    is_tacky_value(Arg2),
+    is_tacky_value(Dst).
+is_tacky_instruction(copy(Src, Dst)) :-
+    is_tacky_value(Src),
+    is_tacky_value(Dst).
+is_tacky_instruction(jump(Identifier)) :-
+    atom(Identifier).
+is_tacky_instruction(jump_if_zero(Condition, Identifier)) :-
+    is_tacky_value(Condition),
+    atom(Identifier).
+is_tacky_instruction(jump_if_not_zero(Condition, Identifier)) :-
+    is_tacky_value(Condition),
+    atom(Identifier).
+is_tacky_instruction(label(Identifier)) :-
+    atom(Identifier).
+
+is_tacky_value(constant(Val)) :-
+    integer(Val).
+is_tacky_value(var(Id)) :-
+    atom(Id).
+
+is_tacky_uni_op(complement).
+is_tacky_uni_op(negate).
+is_tacky_uni_op(not).
+
+is_tacky_bin_op(add).
+is_tacky_bin_op(subtract).
+is_tacky_bin_op(multiply).
+is_tacky_bin_op(divide).
+is_tacky_bin_op(remainder).
+is_tacky_bin_op(bit_and).
+is_tacky_bin_op(bit_or).
+is_tacky_bin_op(bit_xor).
+is_tacky_bin_op(lshift).
+is_tacky_bin_op(rshift).
+is_tacky_bin_op(equal).
+is_tacky_bin_op(not_equal).
+is_tacky_bin_op(less_than).
+is_tacky_bin_op(less_eq).
+is_tacky_bin_op(greater_than).
+is_tacky_bin_op(greater_eq).
+
+%!  tack(+Ast, -Tacky)
+%
+%   Translates an Ast to Tacky.
+
+tack(Program0, Program) :-
+    assertion(is_valid_ast(Program0)),
+    tack_program(Program0, Program).
+
+tack_program(program(FunDef), program(FunDefTacky)) :-
+    reset_gensym,
+    tack_function(FunDef, FunDefTacky).
+
+tack_function(function(Name, Body), function(Name, Instructions)) :-
     block_insts(Body, Instructions, [return(constant(0))]).
 
 block_insts(block(Items), I0, Is) :-
@@ -284,14 +341,15 @@ test(p5) :-
         s(return(var('var.b.2')))
     ]))),
     tack(ProgramIn, Tacky),
-    Tacky = program(function(main, [
+    assertion(is_tacky(Tacky)),
+    assertion(Tacky = program(function(main, [
         unary(negate, constant(5), var('tmp.1')),
         copy(var('tmp.1'), var('var.a.1')),
         binary(subtract, var('var.a.1'), constant(3), var('tmp.2')),
         copy(var('tmp.2'), var('var.b.2')),
         return(var('var.b.2')),
         return(constant(0))
-    ])).
+    ]))).
 
 test(and) :-
     reset_gensym,
