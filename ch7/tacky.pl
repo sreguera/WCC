@@ -92,6 +92,7 @@ tack_program(program(FunDef), program(FunDefTacky)) :-
     tack_function(FunDef, FunDefTacky).
 
 tack_function(function(Name, Body), function(Name, Instructions)) :-
+    % Always return 0 at the end as a precaution against path with no return.
     block_insts(Body, Instructions, [return(constant(0))]).
 
 block_insts(block(Items), I0, Is) :-

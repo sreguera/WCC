@@ -97,6 +97,7 @@ tack_function(function(Name, Body), function(Name, Instructions)) :-
 body_insts([Item|Items], I0, Is) :-
     item_insts(Item, I0, I1),
     body_insts(Items, I1, Is).
+% Always return 0 at the end as a precaution against path with no return.
 body_insts([], [return(constant(0))|Is], Is).
 
 item_insts(d(Decl), I0, Is) :-
