@@ -1,6 +1,9 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
-:- module(codegen, [generate/2]).
+:- module(codegen,
+    [ is_assembly/1,    % Succeeds if Program is a valid assembly program.
+      generate/2        % Generate the Assembly for the given Ast.
+    ]).
 :- use_module(tacky, [is_tacky/1]).
 
 /** <module> Codegen
@@ -8,6 +11,49 @@
 Assembler generator for Chapter 2 of "Writing a C Compiler".
 
 */
+
+%!  is_assembly(+Program)
+%
+%   Succeeds if Program is a valid assembly program.
+
+is_assembly(Program) :-
+    is_assembly_program(Program).
+
+is_assembly_program(program(FunDef)) :-
+    is_assembly_function(FunDef).
+
+is_assembly_function(function(Name, Insts)) :-
+    atom(Name),
+    forall(member(Inst, Insts), is_assembly_instruction(Inst)).
+
+is_assembly_instruction(mov(Src, Dst)) :-
+    is_assembly_operand(Src),
+    is_assembly_operand(Dst).
+is_assembly_instruction(unary(Op, Dst)) :-
+    is_assembly_operator(Op),
+    is_assembly_operand(Dst). 
+is_assembly_instruction(allocate_stack(Int)) :-
+    integer(Int).
+is_assembly_instruction(ret).
+
+is_assembly_operator(neg).
+is_assembly_operator(not).
+
+is_assembly_operand(imm(Int)) :-
+    integer(Int).
+is_assembly_operand(reg(Reg)) :-
+    is_assembly_reg(Reg).
+is_assembly_operand(pseudo(Id)) :-
+    atom(Id).
+is_assembly_operand(stack(Int)) :-
+    integer(Int).
+
+is_assembly_reg(ax).
+is_assembly_reg(r10).
+
+%!  generate(+Ast, -Assembly)
+%
+%   Generate the Assembly for the given Ast.
 
 generate(program(FunDef), program(FunDefAsm)) :-
     assertion(is_tacky(program(FunDef))),
@@ -102,7 +148,8 @@ test(codegen) :-
         unary(complement, var('tmp.1'), var('tmp.2')),
         return(var('tmp.2'))
     ])), Asm),
-    Asm = program(function(main, [
+    assertion(is_assembly(Asm)),
+    assertion(Asm = program(function(main, [
         allocate_stack(8),
         mov(imm(2), stack(-4)),
         unary(neg, stack(-4)),
@@ -111,7 +158,7 @@ test(codegen) :-
         unary(not, stack(-8)),
         mov(stack(-8), reg(ax)),
         ret
-    ])).
+    ]))).
 
 :- end_tests(codegen).
 

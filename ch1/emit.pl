@@ -1,6 +1,7 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
 :- module(emit, [emit/2]).
+:- use_module(codegen, [is_assembly/1]).
 
 /** <module> Emit
  
@@ -9,6 +10,7 @@ Assembler emitter for Chapter 1 of "Writing a C Compiler".
 */
 
 emit(Asm, Output) :-
+    assertion(is_assembly(Asm)),
     with_output_to(string(Output), emit(Asm)).
    
 emit(program(FunDef)) :-
