@@ -126,6 +126,13 @@ is_opt_exp_ast(Exp) :-
     ;   is_exp_ast(Exp)
     ).
 
+%!  parse(+Tokens:[token], -Program) is det
+%
+%   Parses a list of tokens into the AST of a program.
+
+parse(Tokens, Program) :-
+    once(phrase(program(Program), Tokens)).
+
 %!  program(Program)//
 %
 %   Parses a C program and Program is the corresponding AST.
@@ -413,14 +420,6 @@ postfix_cont(In, In) -->
 
 postfix_op('++', post_incr).
 postfix_op('--', post_decr).
-
-
-%!  parse(+Tokens:[token], -Program) is det
-%
-%   Parses a list of tokens into the AST of a program.
-
-parse(Tokens, Program) :-
-    once(phrase(program(Program), Tokens)).
 
 
 %-----------%

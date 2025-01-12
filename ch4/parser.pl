@@ -41,6 +41,13 @@ is_exp_ast(binary(Op, Left, Right)) :-
     is_exp_ast(Left),
     is_exp_ast(Right).
 
+%!  parse(+Tokens:[token], -Program) is det
+%
+%   Parses a list of tokens into the AST of a program.
+
+parse(Tokens, Program) :-
+    once(phrase(program(Program), Tokens)).
+
 %!  program(Program)//
 %
 %   Parses a C program and Program is the corresponding AST.
@@ -122,13 +129,6 @@ paren(Exp) -->
     ['('],
     exp(Exp),
     [')'].
-
-%!  parse(+Tokens:[token], -Program) is det
-%
-%   Parses a list of tokens into the AST of a program.
-
-parse(Tokens, Program) :-
-    once(phrase(program(Program), Tokens)).
 
 
 %-----------%

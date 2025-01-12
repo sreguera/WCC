@@ -34,6 +34,13 @@ is_statement_ast(return(Exp)) :-
 is_exp_ast(constant(Value)) :-
     integer(Value).
 
+%!  parse(+Tokens:[token], -Program) is det
+%
+%   Parses a list of tokens into the AST of a program.
+
+parse(Tokens, Program) :-
+    once(phrase(program(Program), Tokens)).
+
 %!  program(Program)//
 %
 %   Parses a C program and Program is the corresponding AST.
@@ -53,13 +60,6 @@ statement(return(Exp)) -->
 
 exp(constant(Int)) -->
     [constant(Int)].
-
-%!  parse(+Tokens:[token], -Program) is det
-%
-%   Parses a list of tokens into the AST of a program.
-
-parse(Tokens, Program) :-
-    once(phrase(program(Program), Tokens)).
 
 
 %-----------%
