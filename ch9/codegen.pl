@@ -282,7 +282,10 @@ stackify(Insts0, Insts) :-
     empty_assoc(M0),
     replace(Insts0, state(0, M0), Insts1, state(Pos, _)),
     Size is - Pos,
-    Insts = [allocate_stack(Size) | Insts1].
+    AlignedSize is (Size \/ 15) + 1, % Align to the next multiple of 16
+    Insts = [allocate_stack(AlignedSize) | Insts1].
+
+
 
 %!  replace(+InstsIn, +StateIn, -InstsOut, -StateOut)
 
@@ -323,6 +326,7 @@ rep_inst(push(Val0), S0, push(Val), S) :-
 
 rep_val(imm(Int), S, imm(Int), S).
 rep_val(reg(R), S, reg(R), S).
+rep_val(stack(Int), S, stack(Int), S).
 rep_val(pseudo(Id), state(P0, M0), stack(PId), state(P, M)) :-
     (   get_assoc(Id, M0, PId)
     ->  P = P0,
@@ -415,7 +419,7 @@ test(codegen) :-
     ])]), Asm),
     assertion(is_assembly(Asm)),
     assertion(Asm = program([function(main, [
-        allocate_stack(8),
+        allocate_stack(16),
         mov(imm(2), stack(-4)),
         unary(neg, stack(-4)),
         mov(stack(-4), reg(r10)),
@@ -432,7 +436,7 @@ test(codegen) :-
     ])]), Asm),
     assertion(is_assembly(Asm)),
     assertion(Asm = program([function(main, [
-        allocate_stack(4),
+        allocate_stack(16),
         mov(imm(1), stack(-4)),
         binary(add, imm(2), stack(-4)),
         mov(stack(-4), reg(ax)),
@@ -448,7 +452,7 @@ test(codegen_bitwise) :-
     generate(Program, Asm),
     assertion(is_assembly(Asm)),
     assertion(Asm = program([function(main, [
-        allocate_stack(8),
+        allocate_stack(16),
         mov(imm(7), reg(r11)),
         cmp(imm(5), reg(r11)),
         mov(imm(0), stack(-4)),
@@ -509,7 +513,7 @@ test(codegen_function) :-
     assertion(is_assembly(Asm)),
     assertion(Asm = program([
         function(main, [
-            allocate_stack(4),
+            allocate_stack(16),
             allocate_stack(8),
             mov(imm(2), reg(di)),
             mov(imm(1), reg(si)),
@@ -523,7 +527,7 @@ test(codegen_function) :-
             ret
         ]),
         function(foo, [
-            allocate_stack(12),
+            allocate_stack(16),
             mov(reg(di), stack(-4)),
             mov(reg(si), stack(-8)),
             mov(stack(-4), reg(r10)),
