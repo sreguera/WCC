@@ -1,4 +1,4 @@
-/* Copyright 2024 José Sebastián Reguera Candal
+/* Copyright 2025 José Sebastián Reguera Candal
 */
 :- module(tacky,
     [ is_tacky/1,   % Succeeds if Tacky is a valid tacky program.
