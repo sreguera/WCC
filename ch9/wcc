@@ -4,13 +4,13 @@
 #
 HERE="$(dirname "$0")"
 
-TEMP=$(getopt --options "S" --long "lex,parse,validate,tacky,codegen" --name "$0" -- "$@")
+TEMP=$(getopt --options "Sc" --long "lex,parse,validate,tacky,codegen" --name "$0" -- "$@")
 if [[ $? -ne 0 ]]; then
     exit 1
 fi
 eval set -- "${TEMP}"
 
-LAST_PASS=EMIT
+LAST_PASS=LINK
 while true; do
     case "$1" in
         --lex)
@@ -35,6 +35,10 @@ while true; do
             ;;
         -S)
             LAST_PASS=ASSEMBLE
+            shift 1
+            ;;
+        -c)
+            LAST_PASS=COMPILE
             shift 1
             ;;
         --)
@@ -87,8 +91,14 @@ if [[ $? -ne 0 ]]; then
 fi
 rm "${PREPROCESSED_FILE}"
 
-if [ ${LAST_PASS} = EMIT ]; then
+if [ ${LAST_PASS} = LINK ]; then
     gcc "${ASSEMBLY_FILE}" -o "${OUTPUT_FILE}"
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
+    rm "${ASSEMBLY_FILE}"
+elif [ ${LAST_PASS} = COMPILE ]; then
+    gcc -c "${ASSEMBLY_FILE}" -o "${OUTPUT_FILE}.o"
     if [[ $? -ne 0 ]]; then
         exit 1
     fi
