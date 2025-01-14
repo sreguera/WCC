@@ -181,7 +181,8 @@ inst_asm(funcall(Id, Args, Dst), AsmInsts) :- % XXX
 
 caller_copy_args(Args, I0, Is) :-
     caller_copy_reg_args(Args, RestArgs, I0, I1),
-    caller_copy_mem_args(RestArgs, I1, Is).
+    reverse(RestArgs, RestArgsRev),
+    caller_copy_mem_args(RestArgsRev, I1, Is).
 
 caller_copy_reg_args(Args, Rest, I0, Is) :-
     caller_copy_reg_args([di, si, dx, cx, r8, r9], Args, Rest, I0, Is).
@@ -284,8 +285,6 @@ stackify(Insts0, Insts) :-
     Size is - Pos,
     AlignedSize is (Size \/ 15) + 1, % Align to the next multiple of 16
     Insts = [allocate_stack(AlignedSize) | Insts1].
-
-
 
 %!  replace(+InstsIn, +StateIn, -InstsOut, -StateOut)
 
@@ -584,10 +583,10 @@ test(caller_copy_args_mem) :-
         mov(imm(3), reg(cx)),
         mov(imm(4), reg(r8)),
         mov(imm(5), reg(r9)),
-        push(imm(6)),
+        push(imm(8)),
         mov(pseudo('var.test.7'), reg(ax)),
         push(reg(ax)),
-        push(imm(8))
+        push(imm(6))
     ]).
 
 :- end_tests(codegen).
