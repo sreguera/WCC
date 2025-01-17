@@ -15,38 +15,38 @@ emit(Asm, Output) :-
    
 emit(program(FunDef)) :-
     emit(FunDef),
-    format("    .section .note.GNU-stack,\"\",@progbits~n").
+    format("~4|.section .note.GNU-stack,\"\",@progbits~n").
 emit(function(Name, Instructions)) :-
-    format("    .globl ~s~n", [Name]),
+    format("~4|.globl ~s~n", [Name]),
     format("~s:~n", [Name]),
-    format("    pushq   %rbp~n"),
-    format("    movq    %rsp, %rbp~n"),
+    format("~4|pushq ~12|%rbp~n"),
+    format("~4|movq ~12|%rsp, %rbp~n"),
     maplist(inst_emit, Instructions).
 
 inst_emit(mov(Source, Dest)) :-
     exp_emit(Source, SOut),
     exp_emit(Dest, EOut),
-    format("    movl    ~s, ~s~n", [SOut, EOut]).
+    format("~4|movl ~12|~s, ~s~n", [SOut, EOut]).
 inst_emit(ret) :-
-    format("    movq    %rbp, %rsp~n"),
-    format("    popq    %rbp~n"),
-    format("    ret~n").
+    format("~4|movq ~12|%rbp, %rsp~n"),
+    format("~4|popq ~12|%rbp~n"),
+    format("~4|ret~n").
 inst_emit(cdq) :-
-    format("    cdq~n").
+    format("~4|cdq~n").
 inst_emit(idiv(Val)) :-
     exp_emit(Val, VOut),
-    format("    idivl   ~s~n", [VOut]).
+    format("~4|idivl ~12|~s~n", [VOut]).
 inst_emit(unary(Op, Val)) :-
     op_emit(Op, OpOut),
     exp_emit(Val, VOut),
-    format("    ~s  ~s~n", [OpOut, VOut]).
+    format("~4|~s ~12|~s~n", [OpOut, VOut]).
 inst_emit(binary(Op, Val1, Val2)) :-
     op_emit(Op, OpOut),
     exp_emit(Val1, V1Out),
     exp_emit(Val2, V2Out),
-    format("    ~s  ~s, ~s~n", [OpOut, V1Out, V2Out]).
+    format("~4|~s ~12|~s, ~s~n", [OpOut, V1Out, V2Out]).
 inst_emit(allocate_stack(Size)) :-
-    format("    subq    $~d, %rsp~n", [Size]).
+    format("~4|subq ~12|$~d, %rsp~n", [Size]).
 
 op_emit(not, "notl").
 op_emit(neg, "negl").
@@ -81,7 +81,7 @@ reg_emit(r11, "%r11d").
 
 test(inst_emit) :-
     with_output_to(string(Output), inst_emit(binary(mult, imm(3), reg(r11)))),
-    Output = "    imull  $3, %r11d\n".
+    assertion(Output = "    imull   $3, %r11d\n").
 
 test(emit) :-
     emit(program(function(main, [
@@ -94,22 +94,22 @@ test(emit) :-
         mov(stack(-8), reg(ax)),
         ret
     ])), Asm),
-    Asm = "    .globl main
+    assertion(Asm = "    .globl main
 main:
     pushq   %rbp
     movq    %rsp, %rbp
     subq    $8, %rsp
     movl    $2, -4(%rbp)
-    negl  -4(%rbp)
+    negl    -4(%rbp)
     movl    -4(%rbp), %r10d
     movl    %r10d, -8(%rbp)
-    notl  -8(%rbp)
+    notl    -8(%rbp)
     movl    -8(%rbp), %eax
     movq    %rbp, %rsp
     popq    %rbp
     ret
     .section .note.GNU-stack,\"\",@progbits
-".
+").
 
 :- end_tests(emit).
 

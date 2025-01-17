@@ -15,61 +15,61 @@ emit(Asm, Output) :-
    
 emit_program(program(FunDefs)) :-
     maplist(emit_function, FunDefs),
-    format("    .section .note.GNU-stack,\"\",@progbits~n").
+    format("~4|.section .note.GNU-stack,\"\",@progbits~n").
 
 emit_function(function(Name, Instructions)) :-
-    format("    .globl ~s~n", [Name]),
+    format("~4|.globl ~s~n", [Name]),
     format("~s:~n", [Name]),
-    format("    pushq   %rbp~n"),
-    format("    movq    %rsp, %rbp~n"),
+    format("~4|pushq ~12|%rbp~n"),
+    format("~4|movq ~12|%rsp, %rbp~n"),
     maplist(inst_emit, Instructions).
 
 inst_emit(mov(Source, Dest)) :-
     exp_emit_32(Source, SOut),
     exp_emit_32(Dest, EOut),
-    format("    movl    ~s, ~s~n", [SOut, EOut]).
+    format("~4|movl ~12|~s, ~s~n", [SOut, EOut]).
 inst_emit(ret) :-
-    format("    movq    %rbp, %rsp~n"),
-    format("    popq    %rbp~n"),
-    format("    ret~n").
+    format("~4|movq ~12|%rbp, %rsp~n"),
+    format("~4|popq ~12|%rbp~n"),
+    format("~4|ret~n").
 inst_emit(cdq) :-
-    format("    cdq~n").
+    format("~4|cdq~n").
 inst_emit(idiv(Val)) :-
     exp_emit_32(Val, VOut),
-    format("    idivl   ~s~n", [VOut]).
+    format("~4|idivl ~12|~s~n", [VOut]).
 inst_emit(unary(Op, Val)) :-
     op_emit(Op, OpOut),
     exp_emit_32(Val, VOut),
-    format("    ~s  ~s~n", [OpOut, VOut]).
+    format("~4|~s ~12|~s~n", [OpOut, VOut]).
 inst_emit(binary(Op, Val1, Val2)) :-
     op_emit(Op, OpOut),
     exp_emit_32(Val1, V1Out),
     exp_emit_32(Val2, V2Out),
-    format("    ~s  ~s, ~s~n", [OpOut, V1Out, V2Out]).
+    format("~4|~s ~12|~s, ~s~n", [OpOut, V1Out, V2Out]).
 inst_emit(cmp(Val1, Val2)) :-
     exp_emit_32(Val1, V1Out),
     exp_emit_32(Val2, V2Out),
-    format("    cmpl    ~s, ~s~n", [V1Out, V2Out]).
+    format("~4|cmpl ~12|~s, ~s~n", [V1Out, V2Out]).
 inst_emit(jmp(Label)) :-
-    format("    jmp     .L~s~n", [Label]).
+    format("~4|jmp ~12|.L~s~n", [Label]).
 inst_emit(jmp_cc(Cond, Label)) :-
     cond_suffix(Cond, Suffix),
-    format("    j~s     .L~s~n", [Suffix, Label]).
+    format("~4|j~s ~12|.L~s~n", [Suffix, Label]).
 inst_emit(set_cc(Cond, Val)) :-
     cond_suffix(Cond, Suffix),
     exp_emit_8(Val, VOut),
-    format("    set~s   ~s~n", [Suffix, VOut]).
+    format("~4|set~s ~12|~s~n", [Suffix, VOut]).
 inst_emit(label(Label)) :-
     format(".L~s:~n", [Label]).
 inst_emit(allocate_stack(Size)) :-
-    format("    subq    $~d, %rsp~n", [Size]).
+    format("~4|subq ~12|$~d, %rsp~n", [Size]).
 inst_emit(deallocate_stack(Size)) :-
-    format("    addq    $~d, %rsp~n", [Size]).
+    format("~4|addq ~12|$~d, %rsp~n", [Size]).
 inst_emit(push(Val)) :-
     exp_emit_64(Val, ValOut),
-    format("    pushq    ~s~n", [ValOut]).
+    format("~4|pushq ~12|~s~n", [ValOut]).
 inst_emit(call(Label)) :-
-    format("    call    ~s@PLT~n", [Label]).
+    format("~4|call ~12|~s@PLT~n", [Label]).
 inst_emit(X) :-
     throw(invalid_inst(X)).
 
@@ -151,11 +151,11 @@ reg_emit_8(r11, "%r11b").
 
 test(inst_emit) :-
     with_output_to(string(Output), inst_emit(binary(mult, imm(3), reg(r11)))),
-    Output = "    imull  $3, %r11d\n".
+    assertion(Output = "    imull   $3, %r11d\n").
 
 test(inst_emit) :-
     with_output_to(string(Output), inst_emit(set_cc(ne, reg(ax)))),
-    Output = "    setne   %al\n".
+    assertion(Output = "    setne   %al\n").
 
 test(emit) :-
     emit(program([function(main, [
@@ -168,22 +168,22 @@ test(emit) :-
         mov(stack(-8), reg(ax)),
         ret
     ])]), Asm),
-    Asm = "    .globl main
+    assertion(Asm = "    .globl main
 main:
     pushq   %rbp
     movq    %rsp, %rbp
     subq    $8, %rsp
     movl    $2, -4(%rbp)
-    negl  -4(%rbp)
+    negl    -4(%rbp)
     movl    -4(%rbp), %r10d
     movl    %r10d, -8(%rbp)
-    notl  -8(%rbp)
+    notl    -8(%rbp)
     movl    -8(%rbp), %eax
     movq    %rbp, %rsp
     popq    %rbp
     ret
     .section .note.GNU-stack,\"\",@progbits
-".
+").
 
 :- end_tests(emit).
 

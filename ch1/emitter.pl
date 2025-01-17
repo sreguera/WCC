@@ -15,17 +15,17 @@ emit(Asm, Output) :-
    
 emit(program(FunDef)) :-
     emit(FunDef),
-    format("    .section .note.GNU-stack,\"\",@progbits~n").
+    format("~4|.section .note.GNU-stack,\"\",@progbits~n").
 emit(function(Name, Instructions)) :-
-    format("    .globl ~s~n", [Name]),
+    format("~4|.globl ~s~n", [Name]),
     format("~s:~n", [Name]),
     maplist(emit, Instructions).
 emit(mov(Source, Dest)) :-
     exp_emit(Source, SOut),
     exp_emit(Dest, EOut),
-    format("    movl ~s, ~s~n", [SOut, EOut]).
+    format("~4|movl ~12|~s, ~s~n", [SOut, EOut]).
 emit(ret) :-
-    format("    ret~n").
+    format("~4|ret~n").
 
 exp_emit(reg, "%eax").
 exp_emit(imm(Int), Out) :-
@@ -40,12 +40,12 @@ exp_emit(imm(Int), Out) :-
 
 test(emit) :-
     emit(program(function(main, [mov(imm(2), reg), ret])), Asm),
-    Asm = "    .globl main
+    assertion(Asm = "    .globl main
 main:
-    movl $2, %eax
+    movl    $2, %eax
     ret
     .section .note.GNU-stack,\"\",@progbits
-".
+").
 
 :- end_tests(emit).
 
