@@ -5,7 +5,7 @@
 :- use_module(parser).
 :- use_module(tacky).
 :- use_module(codegen).
-:- use_module(emit).
+:- use_module(emitter).
 :- initialization(main, main).
 
 main(Argv) :-

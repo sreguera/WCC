@@ -1,11 +1,11 @@
 /* Copyright 2024 José Sebastián Reguera Candal
 */
-:- module(emit, [emit/2]).
+:- module(emitter, [emit/2]).
 :- use_module(codegen, [is_assembly/1]).
 
-/** <module> Emit
+/** <module> Emitter
  
-Assembler emitter for Chapter 4 of "Writing a C Compiler".
+Assembler emitter for Chapter 6 of "Writing a C Compiler".
 
 */
 

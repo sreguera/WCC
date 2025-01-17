@@ -4,7 +4,7 @@
 :- use_module(lexer).
 :- use_module(parser).
 :- use_module(codegen).
-:- use_module(emit).
+:- use_module(emitter).
 :- initialization(main, main).
 
 main(Argv) :-
