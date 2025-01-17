@@ -22,16 +22,26 @@ cd writing-a-c-compiler-tests
 
 Each directory contains the code for the corresponding chapter.
 
-* ch1 - A Minimal Compiler
-* ch2 - Unary Operators
-* ch3 - Binary Operators
-* ch4 - Logical and Relational Operators
-* ch5 - Local Variables
-* ch6 - if Statements and Conditional Expressions
-* ch7 - Compound Statements
-* ch8 - Loops
-* ch9 - Functions
-* ch10..ch20 - TODO
+* PART I: The Basics
+  * **ch1** - A Minimal Compiler
+  * **ch2** - Unary Operators
+  * **ch3** - Binary Operators  
+    Extra Credit: Bitwise Operators
+  * **ch4** - Logical and Relational Operators
+  * **ch5** - Local Variables  
+    Extra Credit: Compound Assignment, Increment, and Decrement
+  * **ch6** - if Statements and Conditional Expressions  
+    Extra Credit: Labeled Statements and **goto**
+  * **ch7** - Compound Statements
+  * **ch8** - Loops  
+    Extra Credit: **switch** Statements
+  * **ch9** - Functions  
+    TODO labels
+  * **ch10** - File Scope Variable Declarations and Storage-Class Specifiers
+* Part II: Types Beyond Int
+  * **ch11..ch18** - TODO
+* Part III: Optimizations
+  * **ch19..ch20** - TODO
 
 ## Prolog and Compilers
 
