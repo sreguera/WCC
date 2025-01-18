@@ -173,10 +173,10 @@ is_valid_bin_op(cond).
 validate(Program0, Program) :-
     assertion(is_ast(Program0)),
     validate_program(Program0, Program1),
-    type_check_program(Program1),
-    label_program(Program1),
-    loop_program(Program1, Program2),
-    gather_program(Program2, Program).
+    type_check_program(Program1, Program2),
+    label_program(Program2, Program3),
+    loop_program(Program3, Program4),
+    gather_program(Program4, Program).
 
 
 %---------------------------%
@@ -337,7 +337,8 @@ mk_varname(Name, UniqueName) :-
 %   TYPE CHECKER   %
 %------------------%
 
-type_check_program(program(FunDecls)) :-
+type_check_program(program(FunDecls), program(FunDecls)) :-
+    % No transformation right now, just checks.
     empty_table(S0),
     table_push_scope(S0, S1),
     foldl(type_check_decl, FunDecls, S1, _S).
@@ -496,7 +497,8 @@ type_check_exp_opt(Exp, S0, S) :-
 %   LABEL RESOLUTION   %
 %----------------------%
 
-label_program(program(FunDecls)) :-
+label_program(program(FunDecls), program(FunDecls)) :-
+    % No transformation right now, just checks.
     maplist(label_function, FunDecls).
 
 label_function(fun_decl(_Name, _Params, Body)) :-

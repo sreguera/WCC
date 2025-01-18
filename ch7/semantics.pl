@@ -27,8 +27,8 @@ is_valid_ast(Ast) :-
 
 validate(Program0, Program) :-
     assertion(is_ast(Program0)),
-    validate_program(Program0, Program),
-    label_program(Program).
+    validate_program(Program0, Program1),
+    label_program(Program1, Program).
 
 
 %-------------------------%
@@ -131,7 +131,8 @@ mk_varname(Name, UniqueName) :-
 %   LABEL RESOLUTION   %
 %----------------------%
 
-label_program(program(FunDef)) :-
+label_program(program(FunDef), program(FunDef)) :-
+    % No transformation right now, just checks.
     label_function(FunDef).
 
 label_function(function(_Name, Body)) :-
