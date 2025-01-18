@@ -46,6 +46,40 @@ is_token('>>').
 is_token('|').
 is_token('~').
 
+
+%!  lex(+Source:string, -Tokens:[token]) is det.
+%
+%   Parses the Source string into its constituent Tokens.
+%   @throws invalid_char(C) if an unknown char is present in the string.
+%   @throws invalid_digit(C) if a number ends at the start of an identifier.
+
+lex(Source, Tokens) :-
+    string_codes(Source, Codes),
+    once(phrase(xtokens(Tokens), Codes)).
+
+%!  xtokens(-Ts)//
+%
+%   Parses a sequence of tokens, checking for invalid chars and removing
+%   white space.
+%
+%   @throws invalid_char(C) if an unknown char is present in the string.
+%   @throws invalid_digit(C) if a number ends at the start of an identifier.
+
+xtokens(Ts) -->
+    white_spaces(),
+    sequence(xtoken, Ts).
+
+xtoken(T) -->
+    (   token(T)
+    ;   invalid_char(T)
+    ),
+    white_spaces().
+
+invalid_char(C) -->
+    [C],
+    {   throw(invalid_char(C))
+    }.
+
 %!  token(-T)//
 %
 %   Parses one token from the input stream.
@@ -149,39 +183,6 @@ white_space(white_space(S)) -->
 
 white_spaces() -->
     sequence(white_space, _).
-
-%!  xtokens(-Ts)//
-%
-%   Parses a sequence of tokens, checking for invalid chars and removing
-%   white space.
-%
-%   @throws invalid_char(C) if an unknown char is present in the string.
-%   @throws invalid_digit(C) if a number ends at the start of an identifier.
-
-xtokens(Ts) -->
-    white_spaces(),
-    sequence(xtoken, Ts).
-
-xtoken(T) -->
-    (   token(T)
-    ;   invalid_char(T)
-    ),
-    white_spaces().
-
-invalid_char(C) -->
-    [C],
-    {   throw(invalid_char(C))
-    }.
-
-%!  lex(+Source:string, -Tokens:[token]) is det.
-%
-%   Parses the Source string into its constituent Tokens.
-%   @throws invalid_char(C) if an unknown char is present in the string.
-%   @throws invalid_digit(C) if a number ends at the start of an identifier.
-
-lex(Source, Tokens) :-
-    string_codes(Source, Codes),
-    once(phrase(xtokens(Tokens), Codes)).
 
 
 %-----------%
