@@ -32,14 +32,14 @@ is_block_item_ast(s(Statement)) :-
 is_block_item_ast(d(Declaration)) :-
     is_declaration_ast(Declaration).
 
-is_declaration_ast(var_decl(Name, Item)) :-
-    is_var_decl_ast(var_decl(Name, Item)).
+is_declaration_ast(var_decl(Name, Init)) :-
+    is_var_decl_ast(var_decl(Name, Init)).
 is_declaration_ast(fun_decl(Name, Params, Block)) :-
     is_fun_decl_ast(fun_decl(Name, Params, Block)).
 
-is_var_decl_ast(var_decl(Name, Item)) :-
+is_var_decl_ast(var_decl(Name, Init)) :-
     atom(Name),
-    is_opt_exp_ast(Item).
+    is_opt_exp_ast(Init).
 
 is_fun_decl_ast(fun_decl(Name, Params, Block)) :-
     atom(Name),

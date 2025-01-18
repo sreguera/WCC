@@ -36,9 +36,9 @@ is_block_item_ast(s(Statement)) :-
 is_block_item_ast(d(Declaration)) :-
     is_declaration_ast(Declaration).
 
-is_declaration_ast(declaration(Name, Item)) :-
+is_declaration_ast(declaration(Name, Init)) :-
     atom(Name),
-    is_opt_exp_ast(Item).
+    is_opt_exp_ast(Init).
 
 is_statement_ast(return(Exp)) :-
     is_exp_ast(Exp).
