@@ -5,6 +5,7 @@
       validate/2        % Transforms the input program into a validated one.
     ]).
 :- use_module(parser, [is_ast/1]).
+:- use_module(scoped_table).
 
 
 /** <module> Parser
@@ -489,44 +490,6 @@ type_check_exp_opt(none, S, S) :-
 type_check_exp_opt(Exp, S0, S) :-
     Exp \= none,
     type_check_exp(Exp, S0, S).
-
-
-%------------------%
-%   SCOPED TABLE   %
-%------------------%
-
-empty_table([]).
-
-table_push_scope(Table0, [Scope|Table0]) :-
-    empty_assoc(Scope).
-
-table_add_entry(Table0, Key, Value, Table) :-
-    Table0 = [Scope0|Rest],
-    put_assoc(Key, Scope0, Value, Scope1),
-    Table = [Scope1|Rest].
-
-table_add_base_entry(Table0, Key, Value, Table) :-
-    reverse(Table0, Table1),
-    Table1 = [Scope0|Rest],
-    put_assoc(Key, Scope0, Value, Scope1),
-    Table2 = [Scope1|Rest],
-    reverse(Table2, Table).
-
-table_replace_base(Table0, Table1, Table2) :-
-    reverse(Table0, [_Base0|Rest0]),
-    reverse(Table1, [Base1|_Rest1]),
-    reverse([Base1|Rest0], Table2).
-
-table_get_local_entry(Table, Key, Value) :-
-    Table = [Scope|_],
-    get_assoc(Key, Scope, Value).
-
-table_get_global_entry(Table, Key, Value) :-
-    Table = [Scope|Rest],
-    (   get_assoc(Key, Scope, Value)
-    ->  true
-    ;   table_get_global_entry(Rest, Key, Value)
-    ).
 
 
 %----------------------%

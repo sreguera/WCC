@@ -5,6 +5,7 @@
       validate/2        % Transforms the input program into a validated one.
     ]).
 :- use_module(parser, [is_ast/1]).
+:- use_module(scoped_table).
 
 
 /** <module> Parser
@@ -124,32 +125,6 @@ mk_varname(Name, UniqueName) :-
     gensym('var.', Unique),
     atom_concat('var.', Id, Unique),
     atomic_list_concat(['var', Name, Id], '.', UniqueName).
-
-
-%------------------%
-%   SCOPED TABLE   %
-%------------------%
-
-empty_table([]).
-
-table_push_scope(Table0, [Scope|Table0]) :-
-    empty_assoc(Scope).
-
-table_add_entry(Table0, Key, Value, Table) :-
-    Table0 = [Scope0|Rest],
-    put_assoc(Key, Scope0, Value, Scope1),
-    Table = [Scope1|Rest].
-
-table_get_local_entry(Table, Key, Value) :-
-    Table = [Scope|_],
-    get_assoc(Key, Scope, Value).
-
-table_get_global_entry(Table, Key, Value) :-
-    Table = [Scope|Rest],
-    (   get_assoc(Key, Scope, Value)
-    ->  true
-    ;   table_get_global_entry(Rest, Key, Value)
-    ).
 
 
 %----------------------%
