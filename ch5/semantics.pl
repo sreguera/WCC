@@ -26,72 +26,94 @@ is_valid_ast(Ast) :-
 
 validate(Program0, Program) :-
     assertion(is_ast(Program0)),
-    validate_program(Program0, Program).
+    resolve_program(Program0, Program).
 
-validate_program(program(FunDef), program(ValFunDef)) :-
+
+%-------------------------%
+%   VARIABLE RESOLUTION   %
+%-------------------------%
+
+%!  resolve_program(+Program, -ValProgram)
+%
+%   Resolves the variables in the program Program, producing ValProgram.
+%   ValProgram is identical to Program except:
+%   * There are no duplicate variables.
+%   * Variables have a unique global name.
+%   * Increment operators have a variable as an argument.
+%   * Assignment operators have a variable as left argument.
+%
+%   @throws duplicated_var(Name) if a variable is duplicated.
+%   @throws undefined_variable(Name) if a variable is used without being defined.
+%   @throws invalid_lvalue(Expression) if an expression is used where a var is required.
+
+resolve_program(program(FunDef), program(ValFunDef)) :-
     reset_gensym,
     empty_assoc(S0),
-    validate_function(FunDef, ValFunDef, S0, _S).
+    resolve_function(FunDef, ValFunDef, S0, _S).
 
-validate_function(function(Name, Body), function(Name, ValBody), S0, S) :-
-    foldl(validate_item, Body, ValBody, S0, S).
+resolve_function(function(Name, Body), function(Name, ValBody), S0, S) :-
+    foldl(resolve_item, Body, ValBody, S0, S).
 
-validate_item(d(Decl), d(ValDecl), S0, S) :-
-    validate_decl(Decl, ValDecl, S0, S).
-validate_item(s(Stmt), s(ValStmt), S0, S) :-
-    validate_stmt(Stmt, ValStmt, S0, S).
+resolve_item(d(Decl), d(ValDecl), S0, S) :-
+    resolve_decl(Decl, ValDecl, S0, S).
+resolve_item(s(Stmt), s(ValStmt), S0, S) :-
+    resolve_stmt(Stmt, ValStmt, S0, S).
 
-%!  validate_decl(+Decl, -ValDecl, +SIn, -SOut)
+%!  resolve_decl(+Decl, -ValDecl, +SIn, -SOut)
 %
-%   Validates the variables in a declaration.
+%   Resolves the variables in a declaration.
 
-validate_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
+resolve_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
     (   get_assoc(Name, S0, _)
     ->  throw(duplicated_var(Name))
     ;   mk_varname(Name, UniqueName),
         put_assoc(Name, S0, UniqueName, S1),
         (   Exp = none
         ->  ValExp = none, S = S1
-        ;   validate_exp(Exp, ValExp, S1, S)
+        ;   resolve_exp(Exp, ValExp, S1, S)
         )
     ).
 
-%!  validate_stmt(+Stmt, -ValStmt, +SIn, -SOut)
+%!  resolve_stmt(+Stmt, -ValStmt, +SIn, -SOut)
 %
-%   Validates the variables in a statement.
+%   Resolves the variables in a statement.
 
-validate_stmt(return(Exp), return(ValExp), S0, S) :-
-    validate_exp(Exp, ValExp, S0, S).
-validate_stmt(expression(Exp), expression(ValExp), S0, S) :-
-    validate_exp(Exp, ValExp, S0, S).
-validate_stmt(null, null, S, S).
+resolve_stmt(return(Exp), return(ValExp), S0, S) :-
+    resolve_exp(Exp, ValExp, S0, S).
+resolve_stmt(expression(Exp), expression(ValExp), S0, S) :-
+    resolve_exp(Exp, ValExp, S0, S).
+resolve_stmt(null, null, S, S).
 
-%!  validate_exp(+Exp, -ValExp, +SIn, -SOut)
+%!  resolve_exp(+Exp, -ValExp, +SIn, -SOut)
 %
-%   Validates the variables in an expression.
+%   Resolves the variables in an expression.
 
-validate_exp(constant(Int), constant(Int), S, S).
-validate_exp(var(Name), var(UniqueName), S, S) :-
+resolve_exp(constant(Int), constant(Int), S, S).
+resolve_exp(var(Name), var(UniqueName), S, S) :-
     (   get_assoc(Name, S, UniqueName)
     ->  true
     ;   throw(undefined_variable(Name))
     ).
-validate_exp(unary(Op, Val), unary(Op, ValVal), S0, S) :-
+resolve_exp(unary(Op, Val), unary(Op, ValVal), S0, S) :-
     (   memberchk(Op, [pre_incr, pre_decr, post_incr, post_decr]),
         Val \= var(_)
     ->  throw(invalid_lvalue(Val))
     ;   true
     ),
-    validate_exp(Val, ValVal, S0, S).
-validate_exp(binary(Op, Left, Right), binary(Op, ValLeft, ValRight), S0, S) :-
-    validate_exp(Left, ValLeft, S0, S1),
-    validate_exp(Right, ValRight, S1, S).
-validate_exp(assignment(Var, Val), assignment(ValVar, ValVal), S0, S) :-
+    resolve_exp(Val, ValVal, S0, S).
+resolve_exp(binary(Op, Left, Right), binary(Op, ValLeft, ValRight), S0, S) :-
+    resolve_exp(Left, ValLeft, S0, S1),
+    resolve_exp(Right, ValRight, S1, S).
+resolve_exp(assignment(Var, Val), assignment(ValVar, ValVal), S0, S) :-
     (   Var \= var(_)
     ->  throw(invalid_lvalue(Var))
-    ;   validate_exp(Var, ValVar, S0, S1),
-        validate_exp(Val, ValVal, S1, S)
+    ;   resolve_exp(Var, ValVar, S0, S1),
+        resolve_exp(Val, ValVal, S1, S)
     ).
+
+%!  mk_varname(+VarName, -UniqueName)
+%
+%   Generate a unique name for the given variable name.
 
 mk_varname(Name, UniqueName) :-
     gensym('var.', Unique),

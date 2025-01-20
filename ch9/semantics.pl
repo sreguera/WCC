@@ -172,7 +172,7 @@ is_valid_bin_op(cond).
 
 validate(Program0, Program) :-
     assertion(is_ast(Program0)),
-    validate_program(Program0, Program1),
+    resolve_program(Program0, Program1),
     type_check_program(Program1, Program2),
     label_program(Program2, Program3),
     loop_program(Program3, Program4),
@@ -183,149 +183,170 @@ validate(Program0, Program) :-
 %   IDENTIFIER RESOLUTION   %
 %---------------------------%
 
-validate_program(program(FunDecls), program(ValFunDecls)) :-
+%!  resolve_program(+Program, -ValProgram)
+%
+%   Resolves the identifiers in the program Program, producing ValProgram.
+%   ValProgram is identical to Program except:
+%   * There are no duplicate variables (same name in same scope).
+%   * There are no duplicates function parameters.
+%   * Variables have a unique global name.
+%   * Increment operators have a variable as an argument.
+%   * Assignment operators have a variable as left argument.
+%
+%   @throws duplicated_var(Name) if a variable or function parameter is duplicated.
+%   @throws duplicated_declaration(Name) if a function name has already been used.
+%   @throws undefined_variable(Name) if a variable is used without being defined.
+%   @throws undefined_function(Name) if a function is used without being defined.
+%   @throws invalid_lvalue(Expression) if an expression is used where a var is required.
+%   @throws local_function_definition(Name) if a function is being defined in an inner scope.
+
+resolve_program(program(FunDecls), program(ValFunDecls)) :-
     reset_gensym,
     empty_table(S0),
-    table_push_scope(S0, S1),
-    foldl(validate_decl, FunDecls, ValFunDecls, S1, _S).
+    table_push_scope(S0, S1),   % The root scope for function declarations.
+    foldl(resolve_decl, FunDecls, ValFunDecls, S1, _S).
 
-validate_block(block(Items), block(ValItems), S0, S0) :-
-    table_push_scope(S0, S1),
-    foldl(validate_item, Items, ValItems, S1, _).
+resolve_block(block(Items), block(ValItems), S0, S0) :-
+    table_push_scope(S0, S1),   % Each block has its own scope.
+    foldl(resolve_item, Items, ValItems, S1, _).
 
-validate_function_block(none, none, S0, S0).
-validate_function_block(block(Items), block(ValItems), S0, S0) :-
+resolve_function_block(none, none, S0, S0).
+resolve_function_block(block(Items), block(ValItems), S0, S0) :-
     % A function will create and pass the parameters as the initial scope. 
-    foldl(validate_item, Items, ValItems, S0, _).
+    foldl(resolve_item, Items, ValItems, S0, _).
 
-validate_item(d(Decl), d(ValDecl), S0, S) :-
+resolve_item(d(Decl), d(ValDecl), S0, S) :-
     (   Decl = fun_decl(Name, _Args, block(_))
     ->  throw(local_function_definition(Name))
-    ;   validate_decl(Decl, ValDecl, S0, S)
+    ;   resolve_decl(Decl, ValDecl, S0, S)
     ).    
-validate_item(s(Stmt), s(ValStmt), S0, S) :-
-    validate_stmt(Stmt, ValStmt, S0, S).
+resolve_item(s(Stmt), s(ValStmt), S0, S) :-
+    resolve_stmt(Stmt, ValStmt, S0, S).
 
-%!  validate_decl(+Decl, -ValDecl, +SIn, -SOut)
+%!  resolve_decl(+Decl, -ValDecl, +SIn, -SOut)
 %
-%   Validates the identifiers in a declaration.
+%   Resolves the identifiers in a declaration.
 
-validate_decl(var_decl(Name, Exp), var_decl(UniqueName, ValExp), S0, S) :-
+resolve_decl(var_decl(Name, Exp), var_decl(UniqueName, ValExp), S0, S) :-
     (   table_get_local_entry(S0, Name, _)
     ->  throw(duplicated_var(Name))
     ;   mk_varname(Name, UniqueName),
         table_add_entry(S0, Name, entry(UniqueName, none), S1),
-        validate_exp_opt(Exp, ValExp, S1, S)
+        resolve_exp_opt(Exp, ValExp, S1, S)
     ).
-validate_decl(fun_decl(Name, Params, Block), fun_decl(UniqueName, ValParams, ValBlock), S0, S1) :-
+resolve_decl(fun_decl(Name, Params, Block), fun_decl(UniqueName, ValParams, ValBlock), S0, S1) :-
     (   table_get_local_entry(S0, Name, entry(_, none))
     ->  throw(duplicated_declaration(Name))
     ;   Name = UniqueName,
         table_add_entry(S0, Name, entry(UniqueName, external), S1),
-        table_push_scope(S1, S2),
-        foldl(validate_param, Params, ValParams, S2, S3),
-        validate_function_block(Block, ValBlock, S3, _)
+        table_push_scope(S1, S2),   % Function scope containing function parameters.
+        foldl(resolve_param, Params, ValParams, S2, S3),
+        resolve_function_block(Block, ValBlock, S3, _)
     ).
 
-validate_param(Name, UniqueName, S0, S) :-
+resolve_param(Name, UniqueName, S0, S) :-
     (   table_get_local_entry(S0, Name, _)
     ->  throw(duplicated_var(Name))
     ;   mk_varname(Name, UniqueName),
         table_add_entry(S0, Name, entry(UniqueName, none), S)
     ).
 
-%!  validate_stmt(+Stmt, -ValStmt, +SIn, -SOut)
+%!  resolve_stmt(+Stmt, -ValStmt, +SIn, -SOut)
 %
-%   Validates the identifiers in a statement.
+%   Resolves the identifiers in a statement.
 
-validate_stmt(return(Exp), return(ValExp), S0, S) :-
-    validate_exp(Exp, ValExp, S0, S).
-validate_stmt(expression(Exp), expression(ValExp), S0, S) :-
-    validate_exp(Exp, ValExp, S0, S).
-validate_stmt(if(Cond, Then, Else), if(ValCond, ValThen, ValElse), S0, S) :-
-    validate_exp(Cond, ValCond, S0, S1),
-    validate_stmt(Then, ValThen, S1, S2),
+resolve_stmt(return(Exp), return(ValExp), S0, S) :-
+    resolve_exp(Exp, ValExp, S0, S).
+resolve_stmt(expression(Exp), expression(ValExp), S0, S) :-
+    resolve_exp(Exp, ValExp, S0, S).
+resolve_stmt(if(Cond, Then, Else), if(ValCond, ValThen, ValElse), S0, S) :-
+    resolve_exp(Cond, ValCond, S0, S1),
+    resolve_stmt(Then, ValThen, S1, S2),
     (   Else = none
     ->  S = S2, 
         ValElse = none
-    ;   validate_stmt(Else, ValElse, S2, S)
+    ;   resolve_stmt(Else, ValElse, S2, S)
     ).
-validate_stmt(compound(Block), compound(ValBlock), S0, S) :-
-    validate_block(Block, ValBlock, S0, S).
-validate_stmt(break, break, S, S).
-validate_stmt(continue, continue, S, S).
-validate_stmt(while(Exp, Stmt), while(ValExp, ValStmt), S0, S) :-
-    validate_exp(Exp, ValExp, S0, S1),
-    validate_stmt(Stmt, ValStmt, S1, S).
-validate_stmt(do_while(Stmt, Exp), do_while(ValStmt, ValExp), S0, S) :-
-    validate_stmt(Stmt, ValStmt, S0, S1),
-    validate_exp(Exp, ValExp, S1, S).    
-validate_stmt(for(Init, Cond, Post, Stmt), for(ValInit, ValCond, ValPost, ValStmt), S0, S0) :-
-    table_push_scope(S0, S1),
-    validate_for_init(Init, ValInit, S1, S2),
-    validate_exp_opt(Cond, ValCond, S2, S3),
-    validate_exp_opt(Post, ValPost, S3, S4),
-    validate_stmt(Stmt, ValStmt, S4, _S).
-validate_stmt(switch(Exp, Stmt), switch(ValExp, ValStmt), S0, S) :-
-    validate_exp(Exp, ValExp, S0, S1),
-    validate_stmt(Stmt, ValStmt, S1, S).
-validate_stmt(case(Exp, Stmt), case(ValExp, ValStmt), S0, S) :-
-    validate_exp(Exp, ValExp, S0, S1),
-    validate_stmt(Stmt, ValStmt, S1, S).
-validate_stmt(default(Stmt), default(ValStmt), S0, S) :-
-    validate_stmt(Stmt, ValStmt, S0, S).
-validate_stmt(goto(Label), goto(Label), S, S).
-validate_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
-    validate_stmt(Stmt, ValStmt, S0, S).
-validate_stmt(null, null, S, S).
+resolve_stmt(compound(Block), compound(ValBlock), S0, S) :-
+    resolve_block(Block, ValBlock, S0, S).
+resolve_stmt(break, break, S, S).
+resolve_stmt(continue, continue, S, S).
+resolve_stmt(while(Exp, Stmt), while(ValExp, ValStmt), S0, S) :-
+    resolve_exp(Exp, ValExp, S0, S1),
+    resolve_stmt(Stmt, ValStmt, S1, S).
+resolve_stmt(do_while(Stmt, Exp), do_while(ValStmt, ValExp), S0, S) :-
+    resolve_stmt(Stmt, ValStmt, S0, S1),
+    resolve_exp(Exp, ValExp, S1, S).    
+resolve_stmt(for(Init, Cond, Post, Stmt), for(ValInit, ValCond, ValPost, ValStmt), S0, S0) :-
+    table_push_scope(S0, S1),   % for has its own scope with the vars declared in Init.
+    resolve_for_init(Init, ValInit, S1, S2),
+    resolve_exp_opt(Cond, ValCond, S2, S3),
+    resolve_exp_opt(Post, ValPost, S3, S4),
+    resolve_stmt(Stmt, ValStmt, S4, _S).
+resolve_stmt(switch(Exp, Stmt), switch(ValExp, ValStmt), S0, S) :-
+    resolve_exp(Exp, ValExp, S0, S1),
+    resolve_stmt(Stmt, ValStmt, S1, S).
+resolve_stmt(case(Exp, Stmt), case(ValExp, ValStmt), S0, S) :-
+    resolve_exp(Exp, ValExp, S0, S1),
+    resolve_stmt(Stmt, ValStmt, S1, S).
+resolve_stmt(default(Stmt), default(ValStmt), S0, S) :-
+    resolve_stmt(Stmt, ValStmt, S0, S).
+resolve_stmt(goto(Label), goto(Label), S, S).
+resolve_stmt(labelled(Label, Stmt), labelled(Label, ValStmt), S0, S) :-
+    resolve_stmt(Stmt, ValStmt, S0, S).
+resolve_stmt(null, null, S, S).
 
-validate_for_init(init_decl(Decl), init_decl(ValDecl), S0, S) :-
-    validate_decl(Decl, ValDecl, S0, S).
-validate_for_init(init_exp(Exp), init_exp(ValExp), S0, S) :-
-    validate_exp_opt(Exp, ValExp, S0, S).
+resolve_for_init(init_decl(Decl), init_decl(ValDecl), S0, S) :-
+    resolve_decl(Decl, ValDecl, S0, S).
+resolve_for_init(init_exp(Exp), init_exp(ValExp), S0, S) :-
+    resolve_exp_opt(Exp, ValExp, S0, S).
 
-%!  validate_exp(+Exp, -ValExp, +SIn, -SOut)
+%!  resolve_exp(+Exp, -ValExp, +SIn, -SOut)
 %
-%   Validates the identifiers in an expression.
+%   Resolves the identifiers in an expression.
 
-validate_exp(constant(Int), constant(Int), S, S).
-validate_exp(var(Name), var(UniqueName), S, S) :-
+resolve_exp(constant(Int), constant(Int), S, S).
+resolve_exp(var(Name), var(UniqueName), S, S) :-
     (   table_get_global_entry(S, Name, entry(UniqueName, _))
     ->  true
     ;   throw(undefined_variable(Name))
     ).
-validate_exp(funcall(Name, Args), funcall(UniqueName, ValArgs), S0, S) :-
+resolve_exp(funcall(Name, Args), funcall(UniqueName, ValArgs), S0, S) :-
     (   table_get_global_entry(S0, Name, entry(UniqueName, _))
     ->  true
     ;   throw(undefined_function(Name))
     ),
-    foldl(validate_exp, Args, ValArgs, S0, S).
-validate_exp(unary(Op, Val), unary(Op, ValVal), S0, S) :-
+    foldl(resolve_exp, Args, ValArgs, S0, S).
+resolve_exp(unary(Op, Val), unary(Op, ValVal), S0, S) :-
     (   memberchk(Op, [pre_incr, pre_decr, post_incr, post_decr]),
         Val \= var(_)
     ->  throw(invalid_lvalue(Val))
     ;   true
     ),
-    validate_exp(Val, ValVal, S0, S).
-validate_exp(binary(Op, Left, Right), binary(Op, ValLeft, ValRight), S0, S) :-
-    validate_exp(Left, ValLeft, S0, S1),
-    validate_exp(Right, ValRight, S1, S).
-validate_exp(assignment(Var, Val), assignment(ValVar, ValVal), S0, S) :-
+    resolve_exp(Val, ValVal, S0, S).
+resolve_exp(binary(Op, Left, Right), binary(Op, ValLeft, ValRight), S0, S) :-
+    resolve_exp(Left, ValLeft, S0, S1),
+    resolve_exp(Right, ValRight, S1, S).
+resolve_exp(assignment(Var, Val), assignment(ValVar, ValVal), S0, S) :-
     (   Var \= var(_)
     ->  throw(invalid_lvalue(Var))
-    ;   validate_exp(Var, ValVar, S0, S1),
-        validate_exp(Val, ValVal, S1, S)
+    ;   resolve_exp(Var, ValVar, S0, S1),
+        resolve_exp(Val, ValVal, S1, S)
     ).
-validate_exp(conditional(Cond, Then, Else), conditional(ValCond, ValThen, ValElse), S0, S) :-
-    validate_exp(Cond, ValCond, S0, S1),
-    validate_exp(Then, ValThen, S1, S2),
-    validate_exp(Else, ValElse, S2, S).
+resolve_exp(conditional(Cond, Then, Else), conditional(ValCond, ValThen, ValElse), S0, S) :-
+    resolve_exp(Cond, ValCond, S0, S1),
+    resolve_exp(Then, ValThen, S1, S2),
+    resolve_exp(Else, ValElse, S2, S).
 
-validate_exp_opt(none, none, S, S) :-
+resolve_exp_opt(none, none, S, S) :-
     !.
-validate_exp_opt(Exp, ValExp, S0, S) :-
+resolve_exp_opt(Exp, ValExp, S0, S) :-
     Exp \= none,
-    validate_exp(Exp, ValExp, S0, S).
+    resolve_exp(Exp, ValExp, S0, S).
+
+%!  mk_varname(+VarName, -UniqueName)
+%
+%   Generate a unique name for the given variable name.
 
 mk_varname(Name, UniqueName) :-
     gensym('var.', Unique),
