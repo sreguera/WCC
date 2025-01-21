@@ -370,7 +370,7 @@ label_stmt(default(Stmt), S0, S) :-
 label_stmt(goto(Label), S0, S) :-
     S0 = state(Labels, Gotos),
     (   memberchk(Label, Gotos)
-    ->  true
+    ->  S = S0
     ;   S = state(Labels, [Label|Gotos])
     ).
 label_stmt(labelled(Label, Stmt), S0, S) :-
