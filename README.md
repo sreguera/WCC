@@ -35,8 +35,7 @@ Each directory contains the code for the corresponding chapter.
   * **ch7** - Compound Statements
   * **ch8** - Loops  
     Extra Credit: **switch** Statements
-  * **ch9** - Functions  
-    TODO labels
+  * **ch9** - Functions
   * **ch10** - File Scope Variable Declarations and Storage-Class Specifiers
 * Part II: Types Beyond Int
   * **ch11..ch18** - TODO

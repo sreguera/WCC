@@ -524,73 +524,83 @@ type_check_exp_opt(Exp, S0, S) :-
 %   ValProgram is identical to Program except:
 %   * There are no duplicate labels.
 %   * All gotos point to a valid label.
+%   * Labels have a unique global name.
 %
 %   @throws undefined_label(Name) if a label is used without being defined.
 %   @throws duplicated_label(Name) if the same label is used more than once in the same function.
-%   @bug Same label in multiple functions is not unique and the assembler fails.
 
-label_program(program(FunDecls), program(FunDecls)) :-
-    % No transformation right now, just checks.
-    maplist(label_function, FunDecls).
+label_program(program(FunDecls), program(ValFunDecls)) :-
+    maplist(label_function, FunDecls, ValFunDecls).
 
-label_function(fun_decl(_Name, _Params, Body)) :-
-    S0 = state([], []),
+label_function(fun_decl(Name, Params, Body), fun_decl(Name, Params, ValBody)) :-
     (   Body = none
-    ->  true
-    ;   label_block(Body, S0, state(Labels, Gotos)),
-        subtract(Gotos, Labels, Undefined),
-        (   Undefined = [L|_]
+    ->  ValBody = none
+    ;   empty_assoc(S0),
+        label_block(Body, ValBody, S0, S),
+        (   gen_assoc(L, S, entry(_, goto))
         ->  throw(undefined_label(L))
         ;   true
         )
     ).
    
-label_block(block(Items), S0, S) :-
-    foldl(label_item, Items, S0, S).
+label_block(block(Items), block(ValItems), S0, S) :-
+    foldl(label_item, Items, ValItems, S0, S).
 
-label_item(d(_Decl), S, S).
-label_item(s(Stmt), S0, S) :-
-    label_stmt(Stmt, S0, S).
+label_item(d(Decl), d(Decl), S, S).
+label_item(s(Stmt), s(ValStmt), S0, S) :-
+    label_stmt(Stmt, ValStmt, S0, S).
 
-label_stmt(return(_Exp), S, S).
-label_stmt(expression(_Exp), S, S).
-label_stmt(if(_Cond, Then, Else), S0, S) :-
-    label_stmt(Then, S0, S1),
+label_stmt(return(Exp), return(Exp), S, S).
+label_stmt(expression(Exp), expression(Exp), S, S).
+label_stmt(if(Cond, Then, Else), if(Cond, ValThen, ValElse), S0, S) :-
+    label_stmt(Then, ValThen, S0, S1),
     (   Else = none
-    ->  S = S1
-    ;   label_stmt(Else, S1, S)
+    ->  S = S1,
+        ValElse = none 
+    ;   label_stmt(Else, ValElse, S1, S)
     ).
-label_stmt(compound(Block), S0, S) :-
-    label_block(Block, S0, S).
-label_stmt(break, S, S).
-label_stmt(continue, S, S).
-label_stmt(while(_Exp, Stmt), S0, S) :-
-    label_stmt(Stmt, S0, S).
-label_stmt(do_while(Stmt, _Exp), S0, S) :-
-    label_stmt(Stmt, S0, S).    
-label_stmt(for(_Init, _Cond, _Post, Stmt), S0, S) :-
-    label_stmt(Stmt, S0, S).
-label_stmt(switch(_Exp, Stmt), S0, S) :-
-    label_stmt(Stmt, S0, S).
-label_stmt(case(_Exp, Stmt), S0, S) :-
-    label_stmt(Stmt, S0, S).
-label_stmt(default(Stmt), S0, S) :-
-    label_stmt(Stmt, S0, S).
-label_stmt(goto(Label), S0, S) :-
-    S0 = state(Labels, Gotos),
-    (   memberchk(Label, Gotos)
-    ->  true
-    ;   S = state(Labels, [Label|Gotos])
+label_stmt(compound(Block), compound(ValBlock), S0, S) :-
+    label_block(Block, ValBlock, S0, S).
+label_stmt(break, break, S, S).
+label_stmt(continue, continue, S, S).
+label_stmt(while(Exp, Stmt), while(Exp, ValStmt), S0, S) :-
+    label_stmt(Stmt, ValStmt, S0, S).
+label_stmt(do_while(Stmt, Exp), do_while(ValStmt, Exp), S0, S) :-
+    label_stmt(Stmt, ValStmt, S0, S).    
+label_stmt(for(Init, Cond, Post, Stmt), for(Init, Cond, Post, ValStmt), S0, S) :-
+    label_stmt(Stmt, ValStmt, S0, S).
+label_stmt(switch(Exp, Stmt), switch(Exp, ValStmt), S0, S) :-
+    label_stmt(Stmt, ValStmt, S0, S).
+label_stmt(case(Exp, Stmt), case(Exp, ValStmt), S0, S) :-
+    label_stmt(Stmt, ValStmt, S0, S).
+label_stmt(default(Stmt), default(ValStmt), S0, S) :-
+    label_stmt(Stmt, ValStmt, S0, S).
+label_stmt(goto(Label), goto(UniqueName), S0, S) :-
+    (   get_assoc(Label, S0, entry(UniqueName, _))
+    ->  S = S0
+    ;   mk_labelname(Label, UniqueName),
+        put_assoc(Label, S0, entry(UniqueName, goto), S)
     ).
-label_stmt(labelled(Label, Stmt), S0, S) :-
-    S0 = state(Labels, Gotos),
-    (   memberchk(Label, Labels)
-    ->  throw(duplicated_label(Label))
-    ;   S1 = state([Label|Labels], Gotos),
-        label_stmt(Stmt, S1, S)
-    ).
-label_stmt(null, S, S).
+label_stmt(labelled(Label, Stmt), labelled(UniqueName, ValStmt), S0, S) :-
+    (   get_assoc(Label, S0, entry(UniqueName, How))
+    ->  (   How = label
+        ->  throw(duplicated_label(Label))
+        ;   put_assoc(Label, S0, entry(UniqueName, label), S1) % How = goto
+        )
+    ;   mk_labelname(Label, UniqueName),
+        put_assoc(Label, S0, entry(UniqueName, label), S1)
+    ),
+    label_stmt(Stmt, ValStmt, S1, S).
+label_stmt(null, null, S, S).
 
+%!  mk_labelname(+LabelName, -UniqueName)
+%
+%   Generate a unique name for the given label.
+
+mk_labelname(Name, UniqueName) :-
+    gensym('label.', Unique),
+    atom_concat('label.', Id, Unique),
+    atomic_list_concat(['label', Name, Id], '.', UniqueName).
 
 %--------------------%
 %   LOOP LABELLING   %
@@ -775,6 +785,41 @@ test(validate2) :-
         fun_decl(foo, ['var.a.1', 'var.b.2'], none),
         fun_decl(main, [], block([s(return(funcall(foo, [constant(2), constant(1)])))])),
         fun_decl(foo, ['var.x.3', 'var.y.4'], block([s(return(binary(subtract, var('var.x.3'), var('var.y.4'))))]))
+    ])).
+
+test(validate_goto) :-
+    ProgramIn = program([
+        fun_decl(fun1, [], block([
+            s(goto(xxx)),
+            s(return(constant(1)))
+        ]))
+    ]),
+    catch(validate(ProgramIn, _), undefined_label(xxx), true).
+
+test(validate_label) :-
+    ProgramIn = program([
+        fun_decl(fun1, [], block([
+            s(goto(xxx)),
+            s(labelled(xxx, null)),
+            s(return(constant(1)))
+        ])),
+        fun_decl(fun2, [], block([
+            s(labelled(xxx, null)),
+            s(return(constant(1)))
+        ]))
+    ]),
+    validate(ProgramIn, ProgramOut),
+    assertion(is_valid_ast(ProgramOut)),
+    assertion(ProgramOut = program([
+        fun_decl(fun1, [], block([
+            s(goto('label.xxx.1')),
+            s(labelled('label.xxx.1', null)),
+            s(return(constant(1)))
+        ])),
+        fun_decl(fun2, [], block([
+            s(labelled('label.xxx.2', null)),
+            s(return(constant(1)))
+        ]))
     ])).
 
 :- end_tests(semantics).
