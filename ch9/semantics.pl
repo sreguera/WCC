@@ -518,6 +518,17 @@ type_check_exp_opt(Exp, S0, S) :-
 %   LABEL RESOLUTION   %
 %----------------------%
 
+%!  label_program(+Program, -ValProgram)
+%
+%   Checks the labels in the program Program, producing ValProgram.
+%   ValProgram is identical to Program except:
+%   * There are no duplicate labels.
+%   * All gotos point to a valid label.
+%
+%   @throws undefined_label(Name) if a label is used without being defined.
+%   @throws duplicated_label(Name) if the same label is used more than once in the same function.
+%   @bug Same label in multiple functions is not unique and the assembler fails.
+
 label_program(program(FunDecls), program(FunDecls)) :-
     % No transformation right now, just checks.
     maplist(label_function, FunDecls).

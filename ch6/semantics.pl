@@ -141,6 +141,16 @@ mk_varname(Name, UniqueName) :-
 %   LABEL RESOLUTION   %
 %----------------------%
 
+%!  label_program(+Program, -ValProgram)
+%
+%   Checks the labels in the program Program, producing ValProgram.
+%   ValProgram is identical to Program except:
+%   * There are no duplicate labels.
+%   * All gotos point to a valid label.
+%
+%   @throws undefined_label(Name) if a label is used without being defined.
+%   @throws duplicated_label(Name) if the same label is used more than once in the same function.
+
 label_program(program(FunDef), program(FunDef)) :-
     % No transformation right now, just checks.
     label_function(FunDef).
