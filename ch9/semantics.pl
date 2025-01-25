@@ -32,14 +32,14 @@ is_valid_block_item_ast(s(Statement)) :-
 is_valid_block_item_ast(d(Declaration)) :-
     is_valid_declaration_ast(Declaration).
 
-is_valid_declaration_ast(var_decl(Name, Item)) :-
-    is_valid_var_decl_ast(var_decl(Name, Item)).
+is_valid_declaration_ast(var_decl(Name, Init)) :-
+    is_valid_var_decl_ast(var_decl(Name, Init)).
 is_valid_declaration_ast(fun_decl(Name, Params, Block)) :-
     is_valid_fun_decl_ast(fun_decl(Name, Params, Block)).
 
-is_valid_var_decl_ast(var_decl(Name, Item)) :-
+is_valid_var_decl_ast(var_decl(Name, Init)) :-
     atom(Name),
-    is_valid_opt_exp_ast(Item).
+    is_valid_opt_exp_ast(Init).
 
 is_valid_fun_decl_ast(fun_decl(Name, Params, Block)) :-
     atom(Name),
@@ -216,7 +216,7 @@ resolve_function_block(block(Items), block(ValItems), S0, S0) :-
     foldl(resolve_item, Items, ValItems, S0, _).
 
 resolve_item(d(Decl), d(ValDecl), S0, S) :-
-    (   Decl = fun_decl(Name, _Args, block(_))
+    (   Decl = fun_decl(Name, _Params, block(_))
     ->  throw(local_function_definition(Name))
     ;   resolve_decl(Decl, ValDecl, S0, S)
     ).    
@@ -227,12 +227,12 @@ resolve_item(s(Stmt), s(ValStmt), S0, S) :-
 %
 %   Resolves the identifiers in a declaration.
 
-resolve_decl(var_decl(Name, Exp), var_decl(UniqueName, ValExp), S0, S) :-
+resolve_decl(var_decl(Name, Init), var_decl(UniqueName, ValInit), S0, S) :-
     (   table_get_local_entry(S0, Name, _)
     ->  throw(duplicated_var(Name))
     ;   mk_varname(Name, UniqueName),
         table_add_entry(S0, Name, entry(UniqueName, none), S1),
-        resolve_exp_opt(Exp, ValExp, S1, S)
+        resolve_exp_opt(Init, ValInit, S1, S)
     ).
 resolve_decl(fun_decl(Name, Params, Block), fun_decl(UniqueName, ValParams, ValBlock), S0, S1) :-
     (   table_get_local_entry(S0, Name, entry(_, none))
@@ -361,11 +361,11 @@ mk_varname(Name, UniqueName) :-
 type_check_program(program(FunDecls), program(FunDecls)) :-
     % No transformation right now, just checks.
     empty_table(S0),
-    table_push_scope(S0, S1),
+    table_push_scope(S0, S1),   % The root scope for function declarations.
     foldl(type_check_decl, FunDecls, S1, _S).
 
 type_check_block(block(Items), S0, S) :-
-    table_push_scope(S0, S1),
+    table_push_scope(S0, S1),   % Each block has its own scope.
     foldl(type_check_item, Items, S1, S2),
     table_replace_base(S0, S2, S).
 
@@ -376,7 +376,7 @@ type_check_function_block(block(Items), S0, S) :-
     table_replace_base(S0, S1, S).
 
 type_check_item(d(Decl), S0, S) :-
-    (   Decl = fun_decl(Name, _Args, block(_))
+    (   Decl = fun_decl(Name, _Params, block(_))
     ->  throw(local_function_definition(Name))
     ;   type_check_decl(Decl, S0, S)
     ).    
@@ -387,9 +387,9 @@ type_check_item(s(Stmt), S0, S) :-
 %
 %   Validates the identifiers in a declaration.
 
-type_check_decl(var_decl(Name, Exp), S0, S) :-
+type_check_decl(var_decl(Name, Init), S0, S) :-
     table_add_entry(S0, Name, entry(Name, int), S1),
-    type_check_exp_opt(Exp, S1, S).
+    type_check_exp_opt(Init, S1, S).
 type_check_decl(fun_decl(Name, Params, Block), S0, S) :-
     length(Params, NumParams),
     (   Block = none
@@ -407,7 +407,7 @@ type_check_decl(fun_decl(Name, Params, Block), S0, S) :-
         )
     ;   table_add_base_entry(S0, Name, entry(Name, fun(NumParams), Defined), S1)
     ),
-    table_push_scope(S1, S2),
+    table_push_scope(S1, S2),   % Function scope containing function parameters.
     foldl(type_check_param, Params, S2, S3),
     type_check_function_block(Block, S3, S4),
     table_replace_base(S1, S4, S).
@@ -446,7 +446,7 @@ type_check_stmt(do_while(Stmt, Exp), S0, S) :-
     type_check_stmt(Stmt, S0, S1),
     type_check_exp(Exp, S1, S).    
 type_check_stmt(for(Init, Cond, Post, Stmt), S0, S0) :-
-    table_push_scope(S0, S1),
+    table_push_scope(S0, S1),   % for has its own scope with the vars declared in Init.
     type_check_for_init(Init, S1, S2),
     type_check_exp_opt(Cond, S2, S3),
     type_check_exp_opt(Post, S3, S4),
@@ -610,7 +610,7 @@ loop_program(program(FunDecls), program(ValFunDecls)) :-
     reset_gensym,
     maplist(loop_function, FunDecls, ValFunDecls).
 
-loop_function(fun_decl(Name, Args, Body), fun_decl(Name, Args, ValBody)) :-
+loop_function(fun_decl(Name, Params, Body), fun_decl(Name, Params, ValBody)) :-
     loop_block(Body, ValBody, []).
 
 loop_block(none, none, _).
@@ -685,7 +685,7 @@ loop_stmt(null, null, _).
 gather_program(program(FunDecls), program(ValFunDecls)) :-
     maplist(gather_function, FunDecls, ValFunDecls).
 
-gather_function(fun_decl(Name, Args, Body), fun_decl(Name, Args, ValBody)) :-
+gather_function(fun_decl(Name, Params, Body), fun_decl(Name, Params, ValBody)) :-
     gather_block(Body, ValBody, [], []).
 
 gather_block(none, none, S, S).

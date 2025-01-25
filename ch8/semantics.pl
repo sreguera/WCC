@@ -36,9 +36,9 @@ is_valid_block_item_ast(s(Statement)) :-
 is_valid_block_item_ast(d(Declaration)) :-
     is_valid_declaration_ast(Declaration).
 
-is_valid_declaration_ast(declaration(Name, Item)) :-
+is_valid_declaration_ast(declaration(Name, Init)) :-
     atom(Name),
-    is_valid_opt_exp_ast(Item).
+    is_valid_opt_exp_ast(Init).
 
 is_valid_statement_ast(return(Exp)) :-
     is_valid_exp_ast(Exp).
@@ -204,12 +204,12 @@ resolve_item(s(Stmt), s(ValStmt), S0, S) :-
 %
 %   Resolves the variables in a declaration.
 
-resolve_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
+resolve_decl(declaration(Name, Init), declaration(UniqueName, ValInit), S0, S) :-
     (   table_get_local_entry(S0, Name, _)
     ->  throw(duplicated_var(Name))
     ;   mk_varname(Name, UniqueName),
         table_add_entry(S0, Name, UniqueName, S1),
-        resolve_exp_opt(Exp, ValExp, S1, S)
+        resolve_exp_opt(Init, ValInit, S1, S)
     ).
 
 %!  resolve_stmt(+Stmt, -ValStmt, +SIn, -SOut)

@@ -64,14 +64,14 @@ resolve_item(s(Stmt), s(ValStmt), S0, S) :-
 %
 %   Resolves the variables in a declaration.
 
-resolve_decl(declaration(Name, Exp), declaration(UniqueName, ValExp), S0, S) :-
+resolve_decl(declaration(Name, Init), declaration(UniqueName, ValInit), S0, S) :-
     (   get_assoc(Name, S0, _)
     ->  throw(duplicated_var(Name))
     ;   mk_varname(Name, UniqueName),
         put_assoc(Name, S0, UniqueName, S1),
-        (   Exp = none
-        ->  ValExp = none, S = S1
-        ;   resolve_exp(Exp, ValExp, S1, S)
+        (   Init = none
+        ->  ValInit = none, S = S1
+        ;   resolve_exp(Init, ValInit, S1, S)
         )
     ).
 
