@@ -358,6 +358,19 @@ mk_varname(Name, UniqueName) :-
 %   TYPE CHECKER   %
 %------------------%
 
+%!  type_check_program(+Program, -ValProgram)
+%
+%   Type checks Program, producing ValProgram.
+%
+%   @throws local_function_definition(Name) if a function is being defined in an inner scope.
+%   @throws multiple_definitions(Name) if ... TBW ...
+%   @throws incompatible_declaration(Name) if ... TBW ...
+%   @throws function_used_as_variable(Name) if ... TBW ...
+%   @throws undefined_variable(Name) if ... TBW ...
+%   @throws variable_used_as_function(Name) if ... TBW ...
+%   @throws wrong_number_of_args(Name) if ... TBW ...
+%   @throws undefined_function(Name) if ... TBW ...
+
 type_check_program(program(FunDecls), program(FunDecls)) :-
     % No transformation right now, just checks.
     empty_table(S0),
@@ -606,6 +619,13 @@ mk_labelname(Name, UniqueName) :-
 %   LOOP LABELLING   %
 %--------------------%
 
+%!  loop_program(+Program, -ValProgram)
+%
+%   @throws break_outside_loop if ... TBW ...
+%   @throws continue_outside_loop if ... TBW ...
+%   @throws case_without_switch if ... TBW ...
+%   @throws default_without_switch if ... TBW ...
+
 loop_program(program(FunDecls), program(ValFunDecls)) :-
     reset_gensym,
     maplist(loop_function, FunDecls, ValFunDecls).
@@ -681,6 +701,11 @@ loop_stmt(null, null, _).
 %-------------------------%
 %   GATHER SWITCH CASES   %
 %-------------------------%
+
+%!  gather_program(+Program, -ValProgram)
+%
+%   @throws non_constant_case if ... TBW ...
+%   @throws duplicate_switch_clause(X) if ... TBW ...
 
 gather_program(program(FunDecls), program(ValFunDecls)) :-
     maplist(gather_function, FunDecls, ValFunDecls).

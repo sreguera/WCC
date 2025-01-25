@@ -387,6 +387,13 @@ label_stmt(null, S, S).
 %   LOOP LABELLING   %
 %--------------------%
 
+%!  loop_program(+Program, -ValProgram)
+%
+%   @throws break_outside_loop if ... TBW ...
+%   @throws continue_outside_loop if ... TBW ...
+%   @throws case_without_switch if ... TBW ...
+%   @throws default_without_switch if ... TBW ...
+
 loop_program(program(FunDef), program(ValFunDef)) :-
     reset_gensym,
     loop_function(FunDef, ValFunDef).
@@ -461,6 +468,11 @@ loop_stmt(null, null, _).
 %-------------------------%
 %   GATHER SWITCH CASES   %
 %-------------------------%
+
+%!  gather_program(+Program, -ValProgram)
+%
+%   @throws non_constant_case if ... TBW ...
+%   @throws duplicate_switch_clause(X) if ... TBW ...
 
 gather_program(program(FunDef), program(ValFunDef)) :-
     gather_function(FunDef, ValFunDef).
