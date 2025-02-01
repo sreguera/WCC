@@ -404,34 +404,36 @@ type_check_decl(var_decl(Name, Init), S0, S) :-
     table_add_entry(S0, Name, entry(Name, int), S1),
     type_check_exp_opt(Init, S1, S).
 type_check_decl(fun_decl(Name, Params, Block), S0, S) :-
-    length(Params, NumParams),
+    mk_fun_type(Params, FunType),
     (   Block = none
     ->  Defined = undefined
     ;   Defined = defined
     ),
-    (   table_get_global_entry(S0, Name, Entry)
-    ->  (   Entry = entry(Name, fun(NumParams), PrevDefined)
-        ->  (   (PrevDefined, Defined) = (defined, defined)
-            ->  throw(multiple_definitions(Name))
-            ;   merge_def(PrevDefined, Defined, NewDefined),
-                table_add_base_entry(S0, Name, entry(Name, fun(NumParams), NewDefined), S1)
-            )
-        ;   throw(incompatible_declaration(Name))
+    (   table_get_global_entry(S0, Name, entry(Name, PrevFunType, PrevDefined))
+    ->  (   PrevFunType \= FunType
+        ->  throw(incompatible_declaration(Name))
+        ;   (PrevDefined, Defined) = (defined, defined)
+        ->  throw(multiple_definitions(Name))
+        ;   or_def(PrevDefined, Defined, NewDefined),
+            table_add_base_entry(S0, Name, entry(Name, FunType, NewDefined), S1)
         )
-    ;   table_add_base_entry(S0, Name, entry(Name, fun(NumParams), Defined), S1)
+    ;   table_add_base_entry(S0, Name, entry(Name, FunType, Defined), S1)
     ),
     table_push_scope(S1, S2),   % Function scope containing function parameters.
     foldl(type_check_param, Params, S2, S3),
     type_check_function_block(Block, S3, S4),
     table_replace_base(S1, S4, S).
 
-merge_def(defined,     defined,   defined) :- !.
-merge_def(defined,   undefined,   defined) :- !.
-merge_def(undefined,   defined,   defined) :- !.
-merge_def(undefined, undefined, undefined).
-
 type_check_param(Name, S0, S) :-
     table_add_entry(S0, Name, entry(Name, int), S).
+
+mk_fun_type(Params, fun(NumParams)) :-
+    length(Params, NumParams).
+
+or_def(defined,     defined,   defined) :- !.
+or_def(defined,   undefined,   defined) :- !.
+or_def(undefined,   defined,   defined) :- !.
+or_def(undefined, undefined, undefined).
 
 %!  type_check_stmt(+Stmt, +SIn, -SOut)
 %
